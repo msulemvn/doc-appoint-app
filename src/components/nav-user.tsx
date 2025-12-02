@@ -13,17 +13,16 @@ import { UserInfo } from "@/components/user-info";
 import { UserMenuContent } from "@/components/user-menu-content";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronsUpDown } from "lucide-react";
-
-const mockUser = {
-  id: 1,
-  name: "John Doe",
-  email: "john@example.com",
-  avatar: undefined,
-};
+import { useAuthStore } from "@/stores/auth.store";
 
 export function NavUser() {
   const { state } = useSidebar();
   const isMobile = useIsMobile();
+  const user = useAuthStore((state) => state.user);
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <SidebarMenu>
@@ -35,7 +34,7 @@ export function NavUser() {
               className="group text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
               data-test="sidebar-menu-button"
             >
-              <UserInfo user={mockUser} />
+              <UserInfo user={user} />
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
@@ -46,7 +45,7 @@ export function NavUser() {
               isMobile ? "bottom" : state === "collapsed" ? "left" : "bottom"
             }
           >
-            <UserMenuContent user={mockUser} />
+            <UserMenuContent user={user} />
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

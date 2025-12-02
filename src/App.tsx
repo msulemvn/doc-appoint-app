@@ -4,9 +4,12 @@ import Dashboard from "./pages/dashboard";
 import Login from "./pages/login";
 import Register from "./pages/register";
 import Settings from "./pages/settings";
+import { useAuthStore } from "./stores/auth.store";
+import { useAuthInit } from "./hooks/use-auth-init";
 
 function App() {
-  const isAuthenticated = false;
+  useAuthInit();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
     <BrowserRouter>

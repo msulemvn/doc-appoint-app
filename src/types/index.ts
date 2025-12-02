@@ -1,10 +1,36 @@
 import { type LucideIcon } from "lucide-react";
 
+export interface Patient {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  date_of_birth: string | null;
+}
+
+export interface Doctor {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  specialization: string | null;
+  license_number: string | null;
+  years_of_experience: number | null;
+  consultation_fee: number | null;
+  bio: string | null;
+}
+
 export interface User {
   id: number;
   name: string;
   email: string;
+  role?: "patient" | "doctor";
+  email_verified_at?: string;
   avatar?: string;
+  created_at?: string;
+  updated_at?: string;
+  patient?: Patient;
+  doctor?: Doctor;
 }
 
 export interface NavItem {
@@ -23,4 +49,11 @@ export interface SharedData {
     user: User;
   };
   sidebarOpen: boolean;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  user: User;
 }

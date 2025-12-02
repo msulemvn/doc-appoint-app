@@ -8,7 +8,9 @@ import { UserInfo } from "@/components/user-info";
 import { useMobileNavigation } from "@/hooks/use-mobile-navigation";
 import { type User } from "@/types";
 import { LogOut, Settings } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { authService } from "@/services/auth.service";
+import { useAuthStore } from "@/stores/auth.store";
 
 interface UserMenuContentProps {
   user: User;
@@ -16,10 +18,18 @@ interface UserMenuContentProps {
 
 export function UserMenuContent({ user }: UserMenuContentProps) {
   const cleanup = useMobileNavigation();
+  const navigate = useNavigate();
+  const clearAuth = useAuthStore((state) => state.clearAuth);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     cleanup();
-    console.log("Logout clicked");
+    try {
+      await authService.logout();
+    } catch {
+      // Ignore logout API errors - user is already logged out locally
+    }
+    clearAuth();
+    navigate("/login");
   };
 
   return (
