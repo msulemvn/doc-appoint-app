@@ -193,16 +193,16 @@ export default function Settings() {
               )}
             />
 
-            {/* <FormField
+            <FormField
               control={form.control}
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New password</Label>
+                  <FormLabel>New password</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="New password"
+                      placeholder="Leave blank to keep current password"
                       autoComplete="new-password"
                       {...field}
                     />
@@ -229,7 +229,7 @@ export default function Settings() {
                   <FormMessage />
                 </FormItem>
               )}
-            /> */}
+            />
 
             {form.formState.errors.root && (
               <p

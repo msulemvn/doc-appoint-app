@@ -26,7 +26,12 @@ export const authService = {
   updateProfile: async (
     data: UpdateProfileInput,
   ): Promise<{ user: User; message: string }> => {
-    return api.put<{ user: User; message: string }>("/profile", data);
+    const payload = { ...data };
+    if (!payload.password || payload.password === "") {
+      delete payload.password;
+      delete payload.password_confirmation;
+    }
+    return api.put<{ user: User; message: string }>("/profile", payload);
   },
 
   // updatePassword: async (

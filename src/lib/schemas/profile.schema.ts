@@ -9,16 +9,17 @@ export const updateProfileSchema = z
     password: z
       .string()
       .min(8, "Password must be at least 8 characters")
+      .or(z.literal(""))
       .optional(),
-    password_confirmation: z
-      .string()
-      .min(8, "Password confirmation is required")
-      .optional(),
+    password_confirmation: z.string().optional(),
   })
   .refine(
     (data) => {
-      if (data.password && data.password_confirmation) {
-        return data.password === data.password_confirmation;
+      if (data.password && data.password.length > 0) {
+        return (
+          data.password_confirmation &&
+          data.password === data.password_confirmation
+        );
       }
       return true;
     },
