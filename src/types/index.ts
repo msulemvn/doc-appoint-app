@@ -58,7 +58,11 @@ export interface AuthResponse {
   user: User;
 }
 
-export type AppointmentStatus = "pending" | "confirmed" | "cancelled" | "completed";
+export type AppointmentStatus =
+  | "pending"
+  | "confirmed"
+  | "cancelled"
+  | "completed";
 
 export interface Appointment {
   id: number;

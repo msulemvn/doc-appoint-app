@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/layouts/app-layout";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useInitials } from "@/hooks/use-initials";
 import { type BreadcrumbItem } from "@/types";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { format } from "date-fns";
+import { type DoctorWithUser, doctorService } from "@/services/doctor.service";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { appointmentService } from "@/services/appointment.service";
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -35,7 +39,15 @@ export default function NewAppointment() {
   const navigate = useNavigate();
   const [date, setDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
+  const [reason, setReason] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
   const getInitials = useInitials();
+  const [doctors, setDoctors] = useState<DoctorWithUser[]>([]);
+  const [selectedDoctor, setSelectedDoctor] = useState<DoctorWithUser>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const toast = useToast();
 
   const availableSlots = [
     "09:00 AM",
@@ -46,10 +58,60 @@ export default function NewAppointment() {
     "04:00 PM",
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/appointments");
+
+    if (!selectedDoctor || !date || !selectedTime) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const appointmentDate = new Date(date);
+      const [time, modifier] = selectedTime.split(" ");
+      let [hours, minutes] = time.split(":");
+
+      if (hours === "12") {
+        hours = "0";
+      }
+
+      if (modifier === "PM") {
+        hours = (parseInt(hours, 10) + 12).toString();
+      }
+
+      appointmentDate.setHours(parseInt(hours, 10));
+      appointmentDate.setMinutes(parseInt(minutes, 10));
+
+      await appointmentService.createAppointment({
+        doctor_id: selectedDoctor.id,
+        appointment_date: appointmentDate.toISOString(),
+        notes: reason,
+      });
+
+      toast.success("Appointment booked successfully!");
+      navigate("/appointments");
+    } catch (error) {
+      toast.error("Failed to book appointment. Please try again later.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const { doctors } = await doctorService.getAvailableDoctors();
+        setDoctors(doctors);
+      } catch (error) {
+        setError("Failed to load doctors. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -66,25 +128,76 @@ export default function NewAppointment() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="rounded-lg border p-6">
                 <h2 className="mb-4 text-xl font-semibold">Select Doctor</h2>
-                <div className="flex items-center gap-4 rounded-lg border p-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback>{getInitials("Doctor Name")}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold">Dr. [Name]</h3>
-                    <p className="text-sm text-muted-foreground">
-                      [Specialization]
-                    </p>
+                {loading ? (
+                  <div className="flex items-center gap-4 rounded-lg border p-4">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-[150px]" />
+                      <Skeleton className="h-4 w-[100px]" />
+                    </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="ml-auto"
-                  >
-                    Change
-                  </Button>
-                </div>
+                ) : error ? (
+                  <p className="text-red-500">{error}</p>
+                ) : selectedDoctor ? (
+                  <div className="flex items-center gap-4 rounded-lg border p-4">
+                    <Avatar className="h-12 w-12">
+                      {selectedDoctor.user?.avatar && (
+                        <AvatarImage
+                          src={selectedDoctor.user.avatar}
+                          alt={selectedDoctor.user.name}
+                        />
+                      )}
+                      <AvatarFallback>
+                        {getInitials(selectedDoctor.user?.name ?? "")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold">
+                        {selectedDoctor.user?.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedDoctor.specialization}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="ml-auto"
+                      onClick={() => setSelectedDoctor(undefined)}
+                    >
+                      Change
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {doctors.map((doctor) => (
+                      <div
+                        key={doctor.id}
+                        className="flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted"
+                        onClick={() => setSelectedDoctor(doctor)}
+                      >
+                        <Avatar className="h-12 w-12">
+                          {doctor.user?.avatar && (
+                            <AvatarImage
+                              src={doctor.user.avatar}
+                              alt={doctor.user.name}
+                            />
+                          )}
+                          <AvatarFallback>
+                            {getInitials(doctor.user?.name ?? "")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="font-semibold">{doctor.user?.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {doctor.specialization}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="rounded-lg border p-6">
@@ -114,6 +227,8 @@ export default function NewAppointment() {
                           selected={date}
                           onSelect={setDate}
                           initialFocus
+                          disabled={[{ before: new Date() }]}
+                          fromDate={new Date()}
                         />
                       </PopoverContent>
                     </Popover>
@@ -153,6 +268,8 @@ export default function NewAppointment() {
                     <Input
                       id="reason"
                       placeholder="Brief description of your concern"
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
@@ -161,6 +278,8 @@ export default function NewAppointment() {
                       id="notes"
                       className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                       placeholder="Any additional information..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
                     />
                   </div>
                 </div>
@@ -172,15 +291,18 @@ export default function NewAppointment() {
                   variant="outline"
                   onClick={() => navigate("/appointments")}
                   className="flex-1"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!date || !selectedTime}
+                  disabled={
+                    !date || !selectedTime || !selectedDoctor || isSubmitting
+                  }
                   className="flex-1"
                 >
-                  Book Appointment
+                  {isSubmitting ? "Booking..." : "Book Appointment"}
                 </Button>
               </div>
             </form>
@@ -190,10 +312,19 @@ export default function NewAppointment() {
             <div className="rounded-lg border p-6">
               <h3 className="mb-4 font-semibold">Booking Summary</h3>
               <div className="space-y-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Doctor</p>
-                  <p className="font-medium">Dr. [Name]</p>
-                </div>
+                {selectedDoctor ? (
+                  <div>
+                    <p className="text-muted-foreground">Doctor</p>
+                    <p className="font-medium">{selectedDoctor.user?.name}</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-muted-foreground">Doctor</p>
+                    <p className="font-medium text-muted-foreground">
+                      Not selected
+                    </p>
+                  </div>
+                )}
                 {date && (
                   <div>
                     <p className="text-muted-foreground">Date</p>
@@ -208,7 +339,12 @@ export default function NewAppointment() {
                 )}
                 <div className="border-t pt-3">
                   <p className="text-muted-foreground">Consultation Fee</p>
-                  <p className="text-xl font-bold">[Fee Amount]</p>
+                  <p className="text-xl font-bold">
+                    $
+                    {selectedDoctor
+                      ? selectedDoctor?.consultation_fee?.toFixed(2)
+                      : "0.00"}
+                  </p>
                 </div>
               </div>
             </div>

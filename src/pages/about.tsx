@@ -24,8 +24,8 @@ export default function About() {
               <p className="text-muted-foreground">
                 To bridge the gap between patients and healthcare providers by
                 offering a seamless, digital-first approach to medical
-                appointments. We believe quality healthcare should be
-                accessible to all.
+                appointments. We believe quality healthcare should be accessible
+                to all.
               </p>
             </div>
 

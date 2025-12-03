@@ -134,17 +134,6 @@ export default function DoctorDetail() {
                       )}
                     </div>
                   </div>
-                  <Button size="lg" asChild>
-                    <Link
-                      to={
-                        isAuthenticated
-                          ? `/appointments/new?doctor=${id}`
-                          : "/login"
-                      }
-                    >
-                      Book Appointment
-                    </Link>
-                  </Button>
                 </div>
               </CardHeader>
             </Card>
@@ -250,9 +239,7 @@ export default function DoctorDetail() {
             <Button asChild className="w-full" size="lg">
               <Link
                 to={
-                  isAuthenticated
-                    ? `/appointments/new?doctor=${id}`
-                    : "/login"
+                  isAuthenticated ? `/appointments/new?doctor=${id}` : "/login"
                 }
               >
                 Book Appointment

@@ -51,7 +51,9 @@ function App() {
         />
         <Route
           path="/appointments"
-          element={isAuthenticated ? <Appointments /> : <Navigate to="/login" />}
+          element={
+            isAuthenticated ? <Appointments /> : <Navigate to="/login" />
+          }
         />
         <Route
           path="/appointments/new"

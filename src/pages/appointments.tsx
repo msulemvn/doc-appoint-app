@@ -34,7 +34,9 @@ export default function Appointments() {
         const data = await appointmentService.getAppointments();
         setAppointments(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load appointments");
+        setError(
+          err instanceof Error ? err.message : "Failed to load appointments",
+        );
       } finally {
         setLoading(false);
       }

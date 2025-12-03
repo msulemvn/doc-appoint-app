@@ -17,6 +17,17 @@ import {
   XCircle,
   User,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function AppointmentDetail() {
   const { id } = useParams();
@@ -55,10 +66,10 @@ export default function AppointmentDetail() {
 
     try {
       setUpdating(true);
-      const updatedAppointment = await appointmentService.updateAppointmentStatus(
-        Number(id),
-        { status },
-      );
+      const updatedAppointment =
+        await appointmentService.updateAppointmentStatus(Number(id), {
+          status,
+        });
       setAppointment(updatedAppointment);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update status");
@@ -128,10 +139,8 @@ export default function AppointmentDetail() {
     completed: "border-blue-200 bg-blue-50 text-blue-700",
   };
 
-  const canConfirm =
-    isDoctor && appointment.status === "pending";
-  const canComplete =
-    isDoctor && appointment.status === "confirmed";
+  const canConfirm = isDoctor && appointment.status === "pending";
+  const canComplete = isDoctor && appointment.status === "confirmed";
   const canCancel =
     appointment.status !== "cancelled" && appointment.status !== "completed";
 
@@ -171,18 +180,35 @@ export default function AppointmentDetail() {
               </Button>
             )}
             {canCancel && (
-              <Button
-                variant="destructive"
-                onClick={handleCancel}
-                disabled={updating}
-              >
-                {updating ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <XCircle className="mr-2 h-4 w-4" />
-                )}
-                Cancel
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={updating}>
+                    {updating ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <XCircle className="mr-2 h-4 w-4" />
+                    )}
+                    Cancel
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="max-w-md mx-auto">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Cancel Appointment #{id}?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to cancel appointment #{id}? This
+                      action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Go Back</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleCancel}>
+                      Confirm Cancellation
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
         </div>
@@ -197,7 +223,9 @@ export default function AppointmentDetail() {
                 <div className="space-y-4">
                   <div className="flex items-center gap-4 border-b pb-4">
                     <Avatar className="h-16 w-16">
-                      <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
+                      <AvatarFallback>
+                        {getInitials(displayName)}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
                       <h3 className="font-semibold">{displayName}</h3>
@@ -229,14 +257,18 @@ export default function AppointmentDetail() {
                       <Calendar className="mt-1 h-5 w-5 text-muted-foreground" />
                       <div>
                         <p className="text-sm font-medium">Date</p>
-                        <p className="text-sm text-muted-foreground">{dateStr}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {dateStr}
+                        </p>
                       </div>
                     </div>
                     <div className="flex gap-3">
                       <Clock className="mt-1 h-5 w-5 text-muted-foreground" />
                       <div>
                         <p className="text-sm font-medium">Time</p>
-                        <p className="text-sm text-muted-foreground">{timeStr}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {timeStr}
+                        </p>
                       </div>
                     </div>
                   </div>
