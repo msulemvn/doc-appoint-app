@@ -57,3 +57,26 @@ export interface AuthResponse {
   expires_in: number;
   user: User;
 }
+
+export type AppointmentStatus = "pending" | "confirmed" | "cancelled" | "completed";
+
+export interface Appointment {
+  id: number;
+  appointment_date: string;
+  status: AppointmentStatus;
+  notes: string | null;
+  created_at?: string;
+  updated_at?: string;
+  doctor?: Doctor;
+  patient?: Patient;
+}
+
+export interface CreateAppointmentInput {
+  doctor_id: number;
+  appointment_date: string;
+  notes?: string;
+}
+
+export interface UpdateAppointmentStatusInput {
+  status: "confirmed" | "cancelled" | "completed";
+}

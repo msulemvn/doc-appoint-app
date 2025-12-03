@@ -1,4 +1,3 @@
-import { NavFooter } from "@/components/nav-footer";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -10,33 +9,41 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useAuthStore } from "@/stores/auth.store";
 import { type NavItem } from "@/types";
-import { BookOpen, Folder, LayoutGrid } from "lucide-react";
+import { Calendar, Stethoscope, LayoutGrid } from "lucide-react";
 import { Link } from "react-router-dom";
 import AppLogo from "./app-logo";
 
 const mainNavItems: NavItem[] = [
   {
     title: "Dashboard",
-    href: "/",
+    href: "/dashboard",
     icon: LayoutGrid,
   },
-];
-
-const footerNavItems: NavItem[] = [
   {
-    title: "Repository",
-    href: "#",
-    icon: Folder,
+    title: "Appointments",
+    href: "/appointments",
+    icon: Calendar,
   },
   {
-    title: "Documentation",
-    href: "#",
-    icon: BookOpen,
+    title: "Doctors",
+    href: "/doctors",
+    icon: Stethoscope,
   },
 ];
 
 export function AppSidebar() {
+  const { user } = useAuthStore();
+  const isDoctor = user?.role === "doctor";
+
+  const filteredNavItems = mainNavItems.filter((item) => {
+    if (isDoctor && item.title === "Doctors") {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
@@ -52,11 +59,10 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMain items={mainNavItems} />
+        <NavMain items={filteredNavItems} />
       </SidebarContent>
 
       <SidebarFooter>
-        <NavFooter items={footerNavItems} className="mt-auto" />
         <NavUser />
       </SidebarFooter>
     </Sidebar>
