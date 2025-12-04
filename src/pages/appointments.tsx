@@ -6,7 +6,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useInitials } from "@/hooks/use-initials";
 import { useAuthStore } from "@/stores/auth.store";
 import { appointmentService } from "@/services/appointment.service";
-import { type BreadcrumbItem, type Appointment, type AppointmentStatus } from "@/types";
+import {
+  type BreadcrumbItem,
+  type Appointment,
+  type AppointmentStatus,
+} from "@/types";
 import { Calendar, Clock, Plus, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +51,8 @@ export default function Appointments() {
     | "all";
 
   const handleTabChange = (value: string) => {
-    if (value === "pending") { // Default tab
+    if (value === "pending") {
+      // Default tab
       searchParams.delete("status");
     } else {
       searchParams.set("status", value);

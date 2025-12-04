@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PlatinumBadge } from "@/components/ui/platinum-badge";
-import { ShareIcon, PmdcVerifiedIcon, StarIcon } from "@/components/icons";
+import { PmdcVerifiedIcon, StarIcon } from "@/components/icons";
+import { ShareDoctorProfile } from "@/components/share-doctor-profile";
 import { useInitials } from "@/hooks/use-initials";
 import { useAuthStore } from "@/stores/auth.store";
 import { doctorService, type DoctorWithUser } from "@/services/doctor.service";
@@ -243,14 +244,10 @@ function DoctorCard({ doctor }: DoctorCardProps) {
               >
                 {doctor.name}
               </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2 text-muted-foreground"
-              >
-                <ShareIcon />
-                <span className="sr-only md:not-sr-only ml-1">Share</span>
-              </Button>
+              <ShareDoctorProfile
+                doctorName={doctor.name}
+                doctorProfileLink={`${window.location.origin}/doctors/${doctor.id}`}
+              />
             </div>
 
             {doctorData.isPlatinum && (
@@ -339,14 +336,10 @@ function DoctorCard({ doctor }: DoctorCardProps) {
                 )}
               </div>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground"
-              >
-                <ShareIcon />
-                <span className="ml-1">Share</span>
-              </Button>
+              <ShareDoctorProfile
+                doctorName={doctor.name}
+                doctorProfileLink={`${window.location.origin}/doctors/${doctor.id}`}
+              />
             </div>
 
             {doctorData.isPMDCVerified && (
