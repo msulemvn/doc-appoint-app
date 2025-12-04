@@ -11,7 +11,20 @@ import { useInitials } from "@/hooks/use-initials";
 import { useAuthStore } from "@/stores/auth.store";
 import { doctorService, type DoctorWithUser } from "@/services/doctor.service";
 import { type BreadcrumbItem } from "@/types";
-import { Stethoscope, Loader2, AlertCircle } from "lucide-react";
+import {
+  Stethoscope,
+  Heart,
+  Brain,
+  Baby,
+  Bone,
+  Activity,
+  Phone,
+  FileText,
+  Loader2,
+  AlertCircle,
+  Clock,
+  MapPin,
+} from "lucide-react";
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -132,19 +145,67 @@ function DoctorCard({ doctor }: DoctorCardProps) {
   const getInitials = useInitials();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
+  const specializationIcons: Record<string, React.ReactNode> = {
+    Cardiology: <Heart className="h-4 w-4 text-red-500" />,
+    Neurology: <Brain className="h-4 w-4 text-purple-500" />,
+    Pediatrics: <Baby className="h-4 w-4 text-pink-500" />,
+    Orthopedics: <Bone className="h-4 w-4 text-amber-500" />,
+    Dermatology: <Activity className="h-4 w-4 text-green-500" />,
+  };
+
+  const generateBio = (doctor: DoctorWithUser) => {
+    if (doctor.bio && doctor.bio !== "Experienced specialist") {
+      return doctor.bio;
+    }
+
+    const years = doctor.years_of_experience || 0;
+    const specialty = doctor.specialization || "Medical";
+
+    if (years >= 15) {
+      return `Highly experienced ${specialty} specialist with over ${years} years of practice. Known for expertise in complex cases and patient-centered care.`;
+    } else if (years >= 10) {
+      return `Senior ${specialty} consultant with ${years} years of clinical experience. Specializes in advanced diagnostic and treatment approaches.`;
+    } else if (years >= 5) {
+      return `Board-certified ${specialty} physician with ${years} years of experience. Focuses on evidence-based medicine and modern treatment techniques.`;
+    } else {
+      return `Dedicated ${specialty} specialist committed to providing comprehensive patient care with modern medical approaches.`;
+    }
+  };
+
+  const determineAvailability = () => {
+    const hour = new Date().getHours();
+    return hour >= 9 && hour <= 17 ? "Available today" : "Available tomorrow";
+  };
+
+  const generateQualifications = () => {
+    const baseQuals = "MBBS";
+    const years = doctor.years_of_experience || 0;
+
+    if (years >= 10) {
+      return `${baseQuals}, FCPS`;
+    } else if (years >= 5) {
+      return `${baseQuals}, MCPS`;
+    }
+    return baseQuals;
+  };
+
+  const [randomRatingOffset] = useState(() => Math.random() * 0.5);
+  const [randomReviewCount] = useState(
+    () => Math.floor(Math.random() * 500) + 100,
+  );
+
   const doctorData = {
-    ...doctor,
-    rating: 4.9,
-    reviewCount: 644,
-    qualifications: "MBBS, FCPS (Dermatology), D-DERM Ireland",
-    specializations: [
-      doctor.specialization || "General Physician",
-      "Cosmetologist",
-    ].filter(Boolean),
+    rating: 4.5 + randomRatingOffset,
+    reviewCount: randomReviewCount,
+    qualifications: generateQualifications(),
     isPMDCVerified: true,
-    isPlatinum: Math.random() > 0.5,
-    availability: "Available tomorrow",
-    consultationFee: doctor.consultation_fee || 2000,
+    isPlatinum: doctor.years_of_experience
+      ? doctor.years_of_experience > 10
+      : false,
+    availability: determineAvailability(),
+    nextAvailableSlot: "10:00 AM",
+    location: "Main Hospital Campus",
+    bio: generateBio(doctor),
   };
 
   return (
@@ -153,18 +214,19 @@ function DoctorCard({ doctor }: DoctorCardProps) {
         <div className="flex flex-col items-center md:items-start">
           <Link
             to={`/doctors/${doctor.id}`}
-            className="block rounded-full overflow-hidden"
+            className="block rounded-full overflow-hidden relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <Avatar className="h-32 w-32 md:h-40 md:w-40 border-2 border-border">
+            <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-white shadow-lg">
               <AvatarImage
                 src={
                   doctor.user?.avatar ||
-                  "https://via.placeholder.com/400x400?text=Doctor"
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.name)}&background=random&color=fff&bold=true`
                 }
                 alt={`${doctor.name} - ${doctor.specialization}`}
+                className="object-cover"
               />
-              <AvatarFallback className="text-2xl bg-primary/10">
+              <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-primary/70 text-white">
                 {getInitials(doctor.name)}
               </AvatarFallback>
             </Avatar>
@@ -176,7 +238,7 @@ function DoctorCard({ doctor }: DoctorCardProps) {
             <div className="flex items-start justify-between">
               <Link
                 to={`/doctors/${doctor.id}`}
-                className="text-xl font-semibold text-foreground hover:text-primary transition-colors"
+                className="text-xl font-bold text-foreground hover:text-primary transition-colors"
                 onClick={(e) => e.stopPropagation()}
               >
                 {doctor.name}
@@ -187,7 +249,7 @@ function DoctorCard({ doctor }: DoctorCardProps) {
                 className="h-8 px-2 text-muted-foreground"
               >
                 <ShareIcon />
-                <span className="ml-1">Share</span>
+                <span className="sr-only md:not-sr-only ml-1">Share</span>
               </Button>
             </div>
 
@@ -198,26 +260,76 @@ function DoctorCard({ doctor }: DoctorCardProps) {
             )}
 
             {doctorData.isPMDCVerified && (
-              <div className="flex items-center bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full w-fit">
+              <div className="flex items-center bg-green-50 border border-green-200 text-green-700 text-xs px-3 py-1 rounded-full w-fit">
                 <PmdcVerifiedIcon />
                 <span className="ml-1 font-semibold">PMDC Verified</span>
               </div>
             )}
 
-            <div className="text-muted-foreground">
-              <div className="font-medium text-sm mb-1">
-                {doctorData.specializations.join(", ")}
-              </div>
-              <div className="text-sm">{doctorData.qualifications}</div>
+            <div className="flex items-center gap-2">
+              {(doctor.specialization &&
+                specializationIcons[doctor.specialization]) || (
+                <Stethoscope className="h-4 w-4 text-blue-500" />
+              )}
+              <span className="font-semibold text-primary text-sm">
+                {doctor.specialization}
+              </span>
+            </div>
+
+            <p className="text-muted-foreground text-sm">{doctorData.bio}</p>
+
+            <div className="space-y-2">
+              {doctor.phone && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">{doctor.phone}</span>
+                </div>
+              )}
+
+              {doctor.license_number && (
+                <div className="flex items-center gap-2 text-sm">
+                  <FileText className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    License: {doctor.license_number}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-6 mt-4">
+              {doctor.years_of_experience !== null && (
+                <div className="flex flex-col">
+                  <span className="font-bold text-foreground text-lg">
+                    {doctor.years_of_experience}+
+                  </span>
+                  <span className="text-muted-foreground text-sm">
+                    Years Experience
+                  </span>
+                </div>
+              )}
+
+              <Link
+                to={`/doctors/${doctor.id}#reviews`}
+                className="flex flex-col hover:text-primary transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-1 font-bold text-foreground text-lg">
+                  <StarIcon className="fill-yellow-400 text-yellow-400" />
+                  {doctorData.rating.toFixed(1)}
+                </div>
+                <span className="text-muted-foreground text-sm">
+                  {doctorData.reviewCount} Reviews
+                </span>
+              </Link>
             </div>
           </div>
 
           <div className="hidden md:block">
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Link
                   to={`/doctors/${doctor.id}`}
-                  className="text-2xl font-semibold text-foreground hover:text-primary transition-colors"
+                  className="text-2xl font-bold text-foreground hover:text-primary transition-colors"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {doctor.name}
@@ -239,34 +351,40 @@ function DoctorCard({ doctor }: DoctorCardProps) {
 
             {doctorData.isPMDCVerified && (
               <div className="mb-3">
-                <div className="inline-flex items-center bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                <div className="inline-flex items-center bg-green-50 border border-green-200 text-green-700 text-xs px-3 py-1 rounded-full">
                   <PmdcVerifiedIcon />
                   <span className="ml-1 font-semibold">PMDC Verified</span>
                 </div>
               </div>
             )}
 
-            <div className="text-muted-foreground mb-3">
-              <div className="font-medium mb-1">
-                {doctorData.specializations.join(", ")}
+            <div className="mb-3">
+              <div className="flex items-center gap-2 mb-1">
+                {(doctor.specialization &&
+                  specializationIcons[doctor.specialization]) || (
+                  <Stethoscope className="h-4 w-4 text-blue-500" />
+                )}
+                <span className="font-semibold text-primary">
+                  {doctor.specialization}
+                </span>
               </div>
-              <div className="text-sm">{doctorData.qualifications}</div>
+              <div className="text-muted-foreground text-sm">
+                {doctorData.qualifications}
+              </div>
             </div>
 
-            {doctor.bio && (
-              <p className="text-muted-foreground text-sm line-clamp-2 mb-4">
-                {doctor.bio}
-              </p>
-            )}
+            <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+              {doctorData.bio}
+            </p>
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 mb-4">
               {doctor.years_of_experience !== null && (
                 <div className="flex flex-col">
-                  <span className="font-semibold text-foreground text-lg">
-                    {doctor.years_of_experience} Years
+                  <span className="font-bold text-foreground text-lg">
+                    {doctor.years_of_experience}+
                   </span>
                   <span className="text-muted-foreground text-sm">
-                    Experience
+                    Years Experience
                   </span>
                 </div>
               )}
@@ -276,69 +394,109 @@ function DoctorCard({ doctor }: DoctorCardProps) {
                 className="flex flex-col hover:text-primary transition-colors"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center gap-1 font-semibold text-foreground text-lg">
-                  <StarIcon />
-                  {doctorData.rating}
+                <div className="flex items-center gap-1 font-bold text-foreground text-lg">
+                  <StarIcon className="fill-yellow-400 text-yellow-400" />
+                  {doctorData.rating.toFixed(1)}
                 </div>
                 <span className="text-muted-foreground text-sm">
                   {doctorData.reviewCount} Reviews
                 </span>
               </Link>
-            </div>
-          </div>
 
-          <div className="md:hidden mt-4">
-            <div className="flex items-center gap-6">
-              {doctor.years_of_experience !== null && (
-                <div className="flex flex-col">
-                  <span className="font-semibold text-foreground text-lg">
-                    {doctor.years_of_experience} Years
-                  </span>
-                  <span className="text-muted-foreground text-sm">
-                    Experience
-                  </span>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1 font-bold text-foreground text-lg">
+                  <Clock className="h-4 w-4 text-green-500" />
+                  {doctorData.availability}
+                </div>
+                <span className="text-muted-foreground text-sm">
+                  Next: {doctorData.nextAvailableSlot}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6 pt-4 border-t">
+              {doctor.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-foreground text-sm">
+                      Phone
+                    </span>
+                    <span className="text-muted-foreground text-sm">
+                      {doctor.phone}
+                    </span>
+                  </div>
                 </div>
               )}
 
-              <Link
-                to={`/doctors/${doctor.id}#reviews`}
-                className="flex flex-col hover:text-primary transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center gap-1 font-semibold text-foreground text-lg">
-                  <StarIcon />
-                  {doctorData.rating}
+              {doctor.license_number && (
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-foreground text-sm">
+                      License
+                    </span>
+                    <span className="text-muted-foreground text-sm">
+                      {doctor.license_number}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-muted-foreground text-sm">
-                  {doctorData.reviewCount} Reviews
-                </span>
-              </Link>
+              )}
+
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <div className="flex flex-col">
+                  <span className="font-semibold text-foreground text-sm">
+                    Location
+                  </span>
+                  <span className="text-muted-foreground text-sm">
+                    {doctorData.location}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="w-full md:w-64">
-          <div className="flex flex-col">
+        <div className="w-full md:w-72">
+          <div className="flex flex-col gap-4">
+            <div className="text-center">
+              <span className="text-3xl font-bold text-primary">
+                Rs. {doctor.consultation_fee || "150.00"}
+              </span>
+              <p className="text-muted-foreground text-sm mt-1">
+                Consultation Fee
+              </p>
+            </div>
+
             <Button
-              className="w-full py-6 text-lg font-semibold"
+              className="w-full py-6 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
               asChild
               onClick={(e) => e.stopPropagation()}
             >
               <Link
                 to={
-                  isAuthenticated
-                    ? `/appointments/new?doctor=${doctor.id}`
-                    : `/login`
+                  isAuthenticated ? `/appointments/${doctor.id}/new` : "/login"
+                }
+                state={
+                  !isAuthenticated
+                    ? { from: { pathname: `/appointments/${doctor.id}/new` } }
+                    : undefined
                 }
               >
                 Book Appointment
               </Link>
             </Button>
-            {doctorData.consultationFee && (
-              <p className="text-center text-muted-foreground text-sm mt-2">
-                Consultation Fee: Rs. {doctorData.consultationFee}
+
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                <Clock className="h-3 w-3" />
+                Avg. wait time: 15 mins
               </p>
-            )}
+              <p className="text-xs text-muted-foreground mt-1">
+                {doctorData.availability} from {doctorData.nextAvailableSlot}
+              </p>
+            </div>
           </div>
         </div>
       </div>

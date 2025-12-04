@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 
 export default function DoctorDetail() {
-  const { id } = useParams();
+  const { id: doctorId } = useParams();
   const getInitials = useInitials();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [doctor, setDoctor] = useState<DoctorWithUser | null>(null);
@@ -37,12 +37,12 @@ export default function DoctorDetail() {
 
   useEffect(() => {
     const fetchDoctor = async () => {
-      if (!id) return;
+      if (!doctorId) return;
 
       try {
         setLoading(true);
         setError(null);
-        const response = await doctorService.getDoctorById(Number(id));
+        const response = await doctorService.getDoctorById(Number(doctorId));
         setDoctor(response.doctor);
       } catch (err) {
         setError(
@@ -54,9 +54,9 @@ export default function DoctorDetail() {
     };
 
     fetchDoctor();
-  }, [id]);
+  }, [doctorId]);
 
-  if (!id) {
+  if (!doctorId) {
     return <Navigate to="/doctors" replace />;
   }
 
@@ -67,7 +67,7 @@ export default function DoctorDetail() {
     },
     {
       title: doctor?.name || "Doctor Profile",
-      href: `/doctors/${id}`,
+      href: `/doctors/${doctorId}`,
     },
   ];
 
@@ -239,7 +239,12 @@ export default function DoctorDetail() {
             <Button asChild className="w-full" size="lg">
               <Link
                 to={
-                  isAuthenticated ? `/appointments/new?doctor=${id}` : "/login"
+                  isAuthenticated ? `/appointments/${doctorId}/new` : "/login"
+                }
+                state={
+                  !isAuthenticated
+                    ? { from: { pathname: `/appointments/${doctorId}/new` } }
+                    : undefined
                 }
               >
                 Book Appointment

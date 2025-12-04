@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import AppLayout from "@/layouts/app-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,43 +11,46 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useInitials } from "@/hooks/use-initials";
 import { type BreadcrumbItem } from "@/types";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { type DoctorWithUser, doctorService } from "@/services/doctor.service";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
 import { appointmentService } from "@/services/appointment.service";
-
-const breadcrumbs: BreadcrumbItem[] = [
-  {
-    title: "Dashboard",
-    href: "/",
-  },
-  {
-    title: "Appointments",
-    href: "/appointments",
-  },
-  {
-    title: "New Appointment",
-    href: "/appointments/new",
-  },
-];
+import { toast } from "sonner";
+import { useInitials } from "@/hooks/use-initials";
+import { handleApiError } from "@/lib/error-handler";
+import { formatDate } from "@/lib/utils";
 
 export default function NewAppointment() {
+  const { id } = useParams();
   const navigate = useNavigate();
   const [date, setDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [reason, setReason] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
-  const getInitials = useInitials();
   const [doctors, setDoctors] = useState<DoctorWithUser[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorWithUser>();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const toast = useToast();
+  const [isSelectingDoctor, setIsSelectingDoctor] = useState(true);
+
+  const getInitials = useInitials();
+
+  const breadcrumbs: BreadcrumbItem[] = [
+    {
+      title: "Dashboard",
+      href: "/",
+    },
+    {
+      title: "Appointments",
+      href: "/appointments",
+    },
+    {
+      title: "New Appointment",
+      href: id ? `/appointments/${id}/new` : "/appointments/new",
+    },
+  ];
 
   const availableSlots = [
     "09:00 AM",
@@ -70,7 +73,8 @@ export default function NewAppointment() {
     try {
       const appointmentDate = new Date(date);
       const [time, modifier] = selectedTime.split(" ");
-      let [hours, minutes] = time.split(":");
+      let hours = time.split(":")[0];
+      const minutes = time.split(":")[1];
 
       if (hours === "12") {
         hours = "0";
@@ -82,17 +86,28 @@ export default function NewAppointment() {
 
       appointmentDate.setHours(parseInt(hours, 10));
       appointmentDate.setMinutes(parseInt(minutes, 10));
+      appointmentDate.setSeconds(0);
+      appointmentDate.setMilliseconds(0);
+
+      if (appointmentDate < new Date()) {
+        toast.error("Please select a date and time in the future.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Format the date to "YYYY-MM-DD HH:mm:ss"
+      const formattedDate = formatDate(appointmentDate);
 
       await appointmentService.createAppointment({
         doctor_id: selectedDoctor.id,
-        appointment_date: appointmentDate.toISOString(),
+        appointment_date: formattedDate,
         notes: reason,
       });
 
       toast.success("Appointment booked successfully!");
       navigate("/appointments");
-    } catch (error) {
-      toast.error("Failed to book appointment. Please try again later.");
+    } catch (_error) {
+      handleApiError(_error);
     } finally {
       setIsSubmitting(false);
     }
@@ -100,18 +115,39 @@ export default function NewAppointment() {
 
   useEffect(() => {
     const fetchDoctors = async () => {
+      setLoading(true);
       try {
         const { doctors } = await doctorService.getAvailableDoctors();
         setDoctors(doctors);
-      } catch (error) {
-        setError("Failed to load doctors. Please try again later.");
+
+        if (id) {
+          const doctor = doctors.find((d) => d.id === Number(id));
+          if (doctor) {
+            setSelectedDoctor(doctor);
+            setIsSelectingDoctor(false);
+          } else {
+            // Handle case where id is invalid
+            navigate("/appointments/new", { replace: true });
+            setIsSelectingDoctor(true);
+          }
+        } else {
+          setIsSelectingDoctor(true);
+        }
+      } catch (_error) {
+        handleApiError(_error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchDoctors();
-  }, []);
+  }, [id, navigate]);
+
+  const handleDoctorSelect = (doctor: DoctorWithUser) => {
+    setSelectedDoctor(doctor);
+    setIsSelectingDoctor(false);
+    navigate(`/appointments/${doctor.id}/new`, { replace: true });
+  };
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -127,184 +163,217 @@ export default function NewAppointment() {
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="rounded-lg border p-6">
-                <h2 className="mb-4 text-xl font-semibold">Select Doctor</h2>
-                {loading ? (
-                  <div className="flex items-center gap-4 rounded-lg border p-4">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-[150px]" />
-                      <Skeleton className="h-4 w-[100px]" />
-                    </div>
-                  </div>
-                ) : error ? (
-                  <p className="text-red-500">{error}</p>
-                ) : selectedDoctor ? (
-                  <div className="flex items-center gap-4 rounded-lg border p-4">
-                    <Avatar className="h-12 w-12">
-                      {selectedDoctor.user?.avatar && (
-                        <AvatarImage
-                          src={selectedDoctor.user.avatar}
-                          alt={selectedDoctor.user.name}
-                        />
-                      )}
-                      <AvatarFallback>
-                        {getInitials(selectedDoctor.user?.name ?? "")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-semibold">
-                        {selectedDoctor.user?.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedDoctor.specialization}
-                      </p>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <h2 className="mb-4 text-xl font-semibold">
+                    {isSelectingDoctor ? "Select a Doctor" : "Selected Doctor"}
+                  </h2>
+                  {!isSelectingDoctor && selectedDoctor && (
                     <Button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      className="ml-auto"
-                      onClick={() => setSelectedDoctor(undefined)}
+                      onClick={() => setIsSelectingDoctor(true)}
+                      className="bg-black text-white hover:bg-gray-800"
                     >
                       Change
                     </Button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    {doctors.map((doctor) => (
-                      <div
-                        key={doctor.id}
-                        className="flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted"
-                        onClick={() => setSelectedDoctor(doctor)}
-                      >
-                        <Avatar className="h-12 w-12">
-                          {doctor.user?.avatar && (
-                            <AvatarImage
-                              src={doctor.user.avatar}
-                              alt={doctor.user.name}
-                            />
-                          )}
-                          <AvatarFallback>
-                            {getInitials(doctor.user?.name ?? "")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-semibold">{doctor.user?.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {doctor.specialization}
-                          </p>
-                        </div>
+                  )}
+                  {isSelectingDoctor && selectedDoctor && (
+                    <Button
+                      type="button"
+                      onClick={() => setIsSelectingDoctor(false)}
+                      className="bg-black text-white hover:bg-gray-800"
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+                <div className="max-h-60 overflow-y-auto pr-2">
+                  {loading ? (
+                    <div className="flex w-full items-center gap-4 rounded-lg border p-4">
+                      <Skeleton className="h-12 w-12 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-[150px]" />
+                        <Skeleton className="h-4 w-[100px]" />
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-lg border p-6">
-                <h2 className="mb-4 text-xl font-semibold">
-                  Select Date & Time
-                </h2>
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label>Appointment Date</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start text-left font-normal"
+                    </div>
+                  ) : !isSelectingDoctor && selectedDoctor ? (
+                    <div className="flex w-full items-center gap-4 rounded-lg border p-4">
+                      <Avatar className="h-12 w-12">
+                        {selectedDoctor.user?.avatar && (
+                          <AvatarImage
+                            src={selectedDoctor.user?.avatar}
+                            alt={selectedDoctor.user?.name}
+                          />
+                        )}
+                        <AvatarFallback>
+                          {getInitials(selectedDoctor.user?.name ?? "")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-semibold">
+                          {selectedDoctor.user?.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedDoctor.specialization}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {doctors.map((doctor) => (
+                        <button
+                          key={doctor.id}
+                          className="flex w-full items-center gap-4 rounded-lg border p-4 text-left transition-colors hover:bg-muted"
+                          onClick={() => handleDoctorSelect(doctor)}
+                          disabled={selectedDoctor?.id === doctor.id}
                         >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {date ? (
-                            format(date, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={date}
-                          onSelect={setDate}
-                          initialFocus
-                          disabled={[{ before: new Date() }]}
-                          fromDate={new Date()}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  {date && (
-                    <div className="space-y-2">
-                      <Label>Available Time Slots</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {availableSlots.map((slot) => (
-                          <Button
-                            key={slot}
-                            type="button"
-                            variant={
-                              selectedTime === slot ? "default" : "outline"
-                            }
-                            onClick={() => setSelectedTime(slot)}
-                            className="justify-start"
-                          >
-                            <Clock className="mr-2 h-4 w-4" />
-                            {slot}
-                          </Button>
-                        ))}
-                      </div>
+                          <Avatar className="h-12 w-12">
+                            {doctor.user?.avatar && (
+                              <AvatarImage
+                                src={doctor.user?.avatar}
+                                alt={doctor.user?.name}
+                              />
+                            )}
+                            <AvatarFallback>
+                              {getInitials(doctor.user?.name ?? "")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h3 className="font-semibold">
+                              {doctor.user?.name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              {doctor.specialization}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="rounded-lg border p-6">
-                <h2 className="mb-4 text-xl font-semibold">
-                  Appointment Details
-                </h2>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="reason">Reason for Visit</Label>
-                    <Input
-                      id="reason"
-                      placeholder="Brief description of your concern"
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Additional Notes (Optional)</Label>
-                    <textarea
-                      id="notes"
-                      className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                      placeholder="Any additional information..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
+              {selectedDoctor && (
+                <>
+                  <div className="rounded-lg border p-6">
+                    <h2 className="mb-4 text-xl font-semibold">
+                      Select Date & Time
+                    </h2>
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <Label>Appointment Date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start text-left font-normal"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {date ? (
+                                format(date, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={date}
+                              onSelect={setDate}
+                              initialFocus
+                              disabled={[
+                                {
+                                  before: new Date(
+                                    new Date().setDate(
+                                      new Date().getDate() + 1,
+                                    ),
+                                  ),
+                                },
+                              ]}
+                              fromDate={new Date()}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
 
-              <div className="flex gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate("/appointments")}
-                  className="flex-1"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={
-                    !date || !selectedTime || !selectedDoctor || isSubmitting
-                  }
-                  className="flex-1"
-                >
-                  {isSubmitting ? "Booking..." : "Book Appointment"}
-                </Button>
-              </div>
+                      {date && (
+                        <div className="space-y-2">
+                          <Label>Available Time Slots</Label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {availableSlots.map((slot) => (
+                              <Button
+                                key={slot}
+                                type="button"
+                                variant={
+                                  selectedTime === slot ? "default" : "outline"
+                                }
+                                onClick={() => setSelectedTime(slot)}
+                                className="justify-start"
+                              >
+                                <Clock className="mr-2 h-4 w-4" />
+                                {slot}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border p-6">
+                    <h2 className="mb-4 text-xl font-semibold">
+                      Appointment Details
+                    </h2>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="reason">Reason for Visit</Label>
+                        <Input
+                          id="reason"
+                          placeholder="Brief description of your concern"
+                          value={reason}
+                          onChange={(e) => setReason(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="notes">
+                          Additional Notes (Optional)
+                        </Label>
+                        <textarea
+                          id="notes"
+                          className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                          placeholder="Any additional information..."
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => navigate("/appointments")}
+                      className="flex-1"
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={
+                        !date ||
+                        !selectedTime ||
+                        !selectedDoctor ||
+                        isSubmitting
+                      }
+                      className="flex-1"
+                    >
+                      {isSubmitting ? "Booking..." : "Book Appointment"}
+                    </Button>
+                  </div>
+                </>
+              )}
             </form>
           </div>
 
@@ -342,7 +411,9 @@ export default function NewAppointment() {
                   <p className="text-xl font-bold">
                     $
                     {selectedDoctor
-                      ? selectedDoctor?.consultation_fee?.toFixed(2)
+                      ? parseFloat(
+                          selectedDoctor?.consultation_fee?.toString() || "0",
+                        ).toFixed(2)
                       : "0.00"}
                   </p>
                 </div>

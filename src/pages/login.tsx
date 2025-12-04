@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,10 +16,14 @@ import AuthLayout from "@/layouts/auth-layout";
 import { loginSchema, type LoginInput } from "@/lib/schemas/auth.schema";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth.store";
+import { handleApiError } from "@/lib/error-handler";
 
 export default function Login() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const location = useLocation();
+  const { setAuth, isAuthenticated } = useAuthStore();
+
+  const from = location.state?.from?.pathname || "/dashboard";
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -34,13 +38,15 @@ export default function Login() {
     try {
       const response = await authService.login(data);
       setAuth(response.user, response.access_token);
-      navigate("/dashboard");
+      navigate(from, { replace: true });
     } catch (error) {
-      form.setError("root", {
-        message: error instanceof Error ? error.message : "Invalid credentials",
-      });
+      handleApiError(error, form.setError);
     }
   };
+
+  if (isAuthenticated) {
+    return <Navigate to={from} replace />;
+  }
 
   return (
     <AuthLayout
@@ -113,12 +119,6 @@ export default function Login() {
               )}
             />
 
-            {form.formState.errors.root && (
-              <p className="text-sm font-medium text-destructive">
-                {form.formState.errors.root.message}
-              </p>
-            )}
-
             <Button
               type="submit"
               className="w-full"
@@ -130,7 +130,11 @@ export default function Login() {
 
           <div className="text-center text-sm text-muted-foreground">
             Don't have an account?{" "}
-            <Link to="/register" className="hover:underline">
+            <Link
+              to="/register"
+              state={{ from: location.state?.from }}
+              className="hover:underline"
+            >
               Sign up
             </Link>
           </div>

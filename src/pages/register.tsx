@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,10 +15,14 @@ import AuthLayout from "@/layouts/auth-layout";
 import { registerSchema, type RegisterInput } from "@/lib/schemas/auth.schema";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth.store";
+import { handleApiError } from "@/lib/error-handler";
 
 export default function Register() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const location = useLocation();
+  const { setAuth, isAuthenticated } = useAuthStore();
+
+  const from = location.state?.from?.pathname || "/dashboard";
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -34,16 +38,15 @@ export default function Register() {
     try {
       const response = await authService.register(data);
       setAuth(response.user, response.access_token);
-      navigate("/dashboard");
+      navigate(from, { replace: true });
     } catch (error) {
-      form.setError("root", {
-        message:
-          error instanceof Error
-            ? error.message
-            : "Registration failed. Please try again.",
-      });
+      handleApiError(error);
     }
   };
+
+  if (isAuthenticated) {
+    return <Navigate to={from} replace />;
+  }
 
   return (
     <AuthLayout
@@ -130,12 +133,6 @@ export default function Register() {
               )}
             />
 
-            {form.formState.errors.root && (
-              <p className="text-sm font-medium text-destructive">
-                {form.formState.errors.root.message}
-              </p>
-            )}
-
             <Button
               type="submit"
               className="w-full"
@@ -150,7 +147,11 @@ export default function Register() {
 
           <div className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link to="/login" className="hover:underline">
+            <Link
+              to="/login"
+              state={{ from: location.state?.from }}
+              className="hover:underline"
+            >
               Log in
             </Link>
           </div>

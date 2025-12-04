@@ -16,7 +16,7 @@ export interface Doctor {
   specialization: string | null;
   license_number: string | null;
   years_of_experience: number | null;
-  consultation_fee: number | null;
+  consultation_fee: string | number | null;
   bio: string | null;
 }
 

@@ -14,6 +14,7 @@ import AppointmentDetail from "./pages/appointment-detail";
 import NewAppointment from "./pages/new-appointment";
 import { useAuthStore } from "./stores/auth.store";
 import { useAuthInit } from "./hooks/use-auth-init";
+import { ProtectedRoute } from "./components/protected-route";
 
 function App() {
   useAuthInit();
@@ -33,43 +34,57 @@ function App() {
         <Route path="/doctors/:id" element={<DoctorDetail />} />
 
         {/* Auth routes */}
-        <Route
-          path="/login"
-          element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />}
-        />
-        <Route
-          path="/register"
-          element={
-            !isAuthenticated ? <Register /> : <Navigate to="/dashboard" />
-          }
-        />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
         {/* Protected routes */}
         <Route
           path="/dashboard"
-          element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />}
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/appointments"
           element={
-            isAuthenticated ? <Appointments /> : <Navigate to="/login" />
+            <ProtectedRoute>
+              <Appointments />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/appointments/new"
           element={
-            isAuthenticated ? <NewAppointment /> : <Navigate to="/login" />
+            <ProtectedRoute>
+              <NewAppointment />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/appointments/:id/new"
+          element={
+            <ProtectedRoute>
+              <NewAppointment />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/appointments/:id"
           element={
-            isAuthenticated ? <AppointmentDetail /> : <Navigate to="/login" />
+            <ProtectedRoute>
+              <AppointmentDetail />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/settings"
-          element={isAuthenticated ? <Settings /> : <Navigate to="/login" />}
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
         />
       </Routes>
     </BrowserRouter>

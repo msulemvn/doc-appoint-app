@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useInitials } from "@/hooks/use-initials";
 import { useAuthStore } from "@/stores/auth.store";
 import { appointmentService } from "@/services/appointment.service";
-import { type BreadcrumbItem, type Appointment } from "@/types";
+import { type BreadcrumbItem, type Appointment, type AppointmentStatus } from "@/types";
 import { Calendar, Clock, Plus, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -22,17 +24,44 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function Appointments() {
   const { user } = useAuthStore();
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isDoctor = user?.role === "doctor";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const appointmentStatuses: {
+    value: AppointmentStatus | "all";
+    label: string;
+  }[] = [
+    { value: "all", label: "All" },
+    { value: "pending", label: "Pending" },
+    { value: "confirmed", label: "Confirmed" },
+    { value: "cancelled", label: "Cancelled" },
+    { value: "completed", label: "Completed" },
+  ];
+
+  const currentStatus = (searchParams.get("status") || "pending") as
+    | AppointmentStatus
+    | "all";
+
+  const handleTabChange = (value: string) => {
+    if (value === "pending") { // Default tab
+      searchParams.delete("status");
+    } else {
+      searchParams.set("status", value);
+    }
+    navigate(`?${searchParams.toString()}`);
+  };
 
   useEffect(() => {
-    const fetchAppointments = async () => {
+    const fetchAllAppointments = async () => {
       try {
         setLoading(true);
-        const data = await appointmentService.getAppointments();
-        setAppointments(data);
+        setError(null);
+        const data = await appointmentService.getAppointments(); // Fetch all appointments
+        setAllAppointments(data);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to load appointments",
@@ -42,8 +71,26 @@ export default function Appointments() {
       }
     };
 
-    fetchAppointments();
-  }, []);
+    fetchAllAppointments();
+  }, []); // Run only once on mount
+
+  const filteredAppointments = allAppointments.filter((appointment) =>
+    currentStatus === "all" ? true : appointment.status === currentStatus,
+  );
+
+  const counts = appointmentStatuses.reduce(
+    (acc, status) => {
+      if (status.value === "all") {
+        acc[status.value] = allAppointments.length;
+      } else {
+        acc[status.value] = allAppointments.filter(
+          (a) => a.status === status.value,
+        ).length;
+      }
+      return acc;
+    },
+    {} as Record<AppointmentStatus | "all", number>,
+  );
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -69,51 +116,68 @@ export default function Appointments() {
           )}
         </div>
 
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {error && (
-          <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && appointments.length === 0 && (
-          <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed p-12">
-            <Calendar className="h-12 w-12 text-muted-foreground" />
-            <div className="text-center">
-              <h3 className="font-semibold">No appointments found</h3>
-              <p className="text-sm text-muted-foreground">
-                {isDoctor
-                  ? "No patient appointments scheduled yet"
-                  : "You haven't scheduled any appointments yet"}
-              </p>
-            </div>
-            {!isDoctor && (
-              <Button asChild>
-                <Link to="/appointments/new">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Schedule an Appointment
-                </Link>
-              </Button>
-            )}
-          </div>
-        )}
-
-        {!loading && !error && appointments.length > 0 && (
-          <div className="grid gap-4">
-            {appointments.map((appointment) => (
-              <AppointmentCard
-                key={appointment.id}
-                appointment={appointment}
-                isDoctor={isDoctor}
-              />
+        <Tabs value={currentStatus} onValueChange={handleTabChange}>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
+            {appointmentStatuses.map((status) => (
+              <TabsTrigger key={status.value} value={status.value}>
+                {status.label}
+                <Badge className="ml-2 bg-muted text-foreground hover:bg-muted">
+                  {counts[status.value]}
+                </Badge>
+              </TabsTrigger>
             ))}
-          </div>
-        )}
+          </TabsList>
+
+          {appointmentStatuses.map((status) => (
+            <TabsContent key={status.value} value={status.value}>
+              {loading && (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              )}
+
+              {error && (
+                <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
+                  {error}
+                </div>
+              )}
+
+              {!loading && !error && filteredAppointments.length === 0 && (
+                <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed p-12">
+                  <Calendar className="h-12 w-12 text-muted-foreground" />
+                  <div className="text-center">
+                    <h3 className="font-semibold">No appointments found</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {isDoctor
+                        ? "No patient appointments scheduled yet"
+                        : "You haven't scheduled any appointments yet"}
+                    </p>
+                  </div>
+                  {!isDoctor && (
+                    <Button asChild>
+                      <Link to="/appointments/new">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Schedule an Appointment
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {!loading && !error && filteredAppointments.length > 0 && (
+                <div className="grid gap-4">
+                  {filteredAppointments.map((appointment) => (
+                    <AppointmentCard
+                      key={appointment.id}
+                      appointment={appointment}
+                      isDoctor={isDoctor}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
     </AppLayout>
   );
@@ -155,7 +219,10 @@ function AppointmentCard({
   };
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border p-6 transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:justify-between">
+    <Link
+      to={`/appointments/${appointment.id}`}
+      className="flex flex-col gap-4 rounded-lg border p-6 transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:justify-between cursor-pointer"
+    >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <Avatar className="h-16 w-16">
           <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
@@ -186,11 +253,6 @@ function AppointmentCard({
           </div>
         </div>
       </div>
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/appointments/${appointment.id}`}>View Details</Link>
-        </Button>
-      </div>
-    </div>
+    </Link>
   );
 }
