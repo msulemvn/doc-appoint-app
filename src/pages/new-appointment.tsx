@@ -17,7 +17,6 @@ import { format } from "date-fns";
 import { type DoctorWithUser, doctorService } from "@/services/doctor.service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { appointmentService } from "@/services/appointment.service";
-import { toast } from "sonner";
 import { useInitials } from "@/hooks/use-initials";
 import { handleApiError } from "@/lib/error-handler";
 import { formatDate } from "@/lib/utils";
@@ -90,7 +89,6 @@ export default function NewAppointment() {
       appointmentDate.setMilliseconds(0);
 
       if (appointmentDate < new Date()) {
-        toast.error("Please select a date and time in the future.");
         setIsSubmitting(false);
         return;
       }
@@ -104,7 +102,6 @@ export default function NewAppointment() {
         notes: reason,
       });
 
-      toast.success("Appointment booked successfully!");
       navigate("/appointments");
     } catch (_error) {
       handleApiError(_error);

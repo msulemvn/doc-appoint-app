@@ -222,13 +222,13 @@ function DoctorCard({ doctor }: DoctorCardProps) {
               <AvatarImage
                 src={
                   doctor.user?.avatar ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.name)}&background=random&color=fff&bold=true`
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.user?.name || doctor.name || "Unknown")}&background=random&color=fff&bold=true`
                 }
-                alt={`${doctor.name} - ${doctor.specialization}`}
+                alt={`${doctor.user?.name || doctor.name} - ${doctor.specialization}`}
                 className="object-cover"
               />
               <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-primary/70 text-white">
-                {getInitials(doctor.name)}
+                {getInitials(doctor.user?.name || doctor.name || "Unknown")}
               </AvatarFallback>
             </Avatar>
           </Link>
@@ -242,10 +242,10 @@ function DoctorCard({ doctor }: DoctorCardProps) {
                 className="text-xl font-bold text-foreground hover:text-primary transition-colors"
                 onClick={(e) => e.stopPropagation()}
               >
-                {doctor.name}
+                {doctor.user?.name || doctor.name}
               </Link>
               <ShareDoctorProfile
-                doctorName={doctor.name}
+                doctorName={doctor.user?.name || doctor.name || "Unknown"}
                 doctorProfileLink={`${window.location.origin}/doctors/${doctor.id}`}
               />
             </div>
@@ -329,7 +329,7 @@ function DoctorCard({ doctor }: DoctorCardProps) {
                   className="text-2xl font-bold text-foreground hover:text-primary transition-colors"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {doctor.name}
+                  {doctor.user?.name || doctor.name}
                 </Link>
                 {doctorData.isPlatinum && (
                   <PlatinumBadge alt="platinum-doc-img" />
@@ -337,7 +337,7 @@ function DoctorCard({ doctor }: DoctorCardProps) {
               </div>
 
               <ShareDoctorProfile
-                doctorName={doctor.name}
+                doctorName={doctor.user?.name || doctor.name || "Unknown"}
                 doctorProfileLink={`${window.location.origin}/doctors/${doctor.id}`}
               />
             </div>

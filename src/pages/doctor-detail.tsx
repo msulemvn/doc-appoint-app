@@ -106,14 +106,21 @@ export default function DoctorDetail() {
               <CardHeader>
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src={doctor.user?.avatar} alt={doctor.name} />
+                    <AvatarImage
+                      src={doctor.user?.avatar}
+                      alt={doctor.user?.name || doctor.name}
+                    />
                     <AvatarFallback className="text-2xl">
-                      {getInitials(doctor.name)}
+                      {getInitials(
+                        doctor.user?.name || doctor.name || "Unknown",
+                      )}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 space-y-2">
                     <div>
-                      <CardTitle className="text-3xl">{doctor.name}</CardTitle>
+                      <CardTitle className="text-3xl">
+                        {doctor.user?.name || doctor.name}
+                      </CardTitle>
                       {doctor.specialization && (
                         <CardDescription className="mt-2 text-lg">
                           {doctor.specialization}
