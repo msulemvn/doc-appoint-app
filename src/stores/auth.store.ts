@@ -1,3 +1,5 @@
+import { disconnect, createEchoInstance } from "@/lib/echo";
+import { useNotificationStore } from "./notification.store";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User } from "@/types";
@@ -19,9 +21,12 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (user, token) => {
         localStorage.setItem("token", token);
         set({ user, token, isAuthenticated: true });
+        window.Echo = createEchoInstance();
       },
       clearAuth: () => {
         localStorage.removeItem("token");
+        useNotificationStore.getState().clearNotifications();
+        disconnect();
         set({ user: null, token: null, isAuthenticated: false });
       },
     }),
@@ -30,3 +35,4 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 );
+

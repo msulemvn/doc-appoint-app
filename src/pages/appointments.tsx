@@ -1,5 +1,5 @@
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import AppLayout from "@/layouts/app-layout";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -32,7 +32,7 @@ export default function Appointments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isDoctor = user?.role === "doctor";
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const appointmentStatuses: {
@@ -60,24 +60,72 @@ export default function Appointments() {
     navigate(`?${searchParams.toString()}`);
   };
 
+  const fetchAllAppointments = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await appointmentService.getAppointments(); // Fetch all appointments
+      setAllAppointments(data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load appointments",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchAllAppointments = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await appointmentService.getAppointments(); // Fetch all appointments
-        setAllAppointments(data);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to load appointments",
-        );
-      } finally {
-        setLoading(false);
+    fetchAllAppointments();
+  }, [fetchAllAppointments]); // Re-run effect when user changes
+
+  useEffect(() => {
+    if (!user || !window.Echo) return;
+
+    const channelName = `users.${user.id}`;
+    const channel = window.Echo.private(channelName);
+
+    const handleStatusUpdate = (e: { appointment?: Appointment }) => {
+      if (!e.appointment) {
+        return;
       }
+      setAllAppointments((prev) => {
+        const existingIndex = prev.findIndex((a) => a.id === e.appointment!.id);
+        if (existingIndex !== -1) {
+          const updated = [...prev];
+          updated[existingIndex] = e.appointment!;
+          return updated;
+        }
+        return prev;
+      });
     };
 
-    fetchAllAppointments();
-  }, []); // Run only once on mount
+    const handleAppointmentCreated = (e: { appointment?: Appointment }) => {
+      if (!e.appointment) {
+        return;
+      }
+      setAllAppointments((prev) => {
+        const exists = prev.some((a) => a.id === e.appointment!.id);
+        if (!exists) {
+          return [e.appointment!, ...prev];
+        }
+        return prev;
+      });
+    };
+
+    channel
+      .listen(".appointment.status.updated", handleStatusUpdate)
+      .listen(".appointment.created", handleAppointmentCreated);
+
+    return () => {
+      if (window.Echo) {
+        channel
+          .stopListening(".appointment.status.updated", handleStatusUpdate)
+          .stopListening(".appointment.created", handleAppointmentCreated);
+        window.Echo.leave(channelName);
+      }
+    };
+  }, [user]); // Depend on user to ensure correct channel and re-subscription if user changes
 
   const filteredAppointments = allAppointments.filter((appointment) =>
     currentStatus === "all" ? true : appointment.status === currentStatus,
@@ -198,11 +246,11 @@ function AppointmentCard({
   const getInitials = useInitials();
 
   const displayName = isDoctor
-    ? appointment.patient?.name || "Unknown Patient"
-    : appointment.doctor?.name || "Unknown Doctor";
+    ? appointment.patient?.user?.name || "Unknown Patient"
+    : appointment.doctor?.user?.name || "Unknown Doctor";
 
   const displayInfo = isDoctor
-    ? appointment.patient?.email
+    ? appointment.patient?.user?.email
     : appointment.doctor?.specialization;
 
   const appointmentDate = new Date(appointment.appointment_date);

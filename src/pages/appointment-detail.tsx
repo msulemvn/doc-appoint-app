@@ -57,7 +57,31 @@ export default function AppointmentDetail() {
     };
 
     fetchAppointment();
-  }, [id]);
+
+    if (!user?.id || !window.Echo) return;
+
+    const channelName = `users.${user.id}`;
+    const channel = window.Echo.private(channelName);
+
+    const handleRealtimeUpdate = (e: { appointment: Appointment }) => {
+      if (e.appointment.id === Number(id)) {
+        setAppointment(e.appointment);
+      }
+    };
+
+    channel
+      .listen(".appointment.status.updated", handleRealtimeUpdate);
+
+    return () => {
+      if (window.Echo) {
+        channel.stopListening(
+          ".appointment.status.updated",
+          handleRealtimeUpdate,
+        );
+        window.Echo.leave(channelName);
+      }
+    };
+  }, [id, user]);
 
   const handleStatusUpdate = async (
     status: "confirmed" | "cancelled" | "completed",
@@ -119,7 +143,7 @@ export default function AppointmentDetail() {
   }
 
   const displayPerson = isDoctor ? appointment.patient : appointment.doctor;
-  const displayName = displayPerson?.name || "Unknown";
+  const displayName = displayPerson?.user?.name || "Unknown";
   const appointmentDate = new Date(appointment.appointment_date);
   const dateStr = appointmentDate.toLocaleDateString("en-US", {
     weekday: "long",
@@ -298,10 +322,10 @@ export default function AppointmentDetail() {
                     <span>{displayPerson.phone}</span>
                   </div>
                 )}
-                {displayPerson?.email && (
+                {displayPerson?.user?.email && (
                   <div className="flex gap-3">
                     <Mail className="h-5 w-5 text-muted-foreground" />
-                    <span>{displayPerson.email}</span>
+                    <span>{displayPerson.user.email}</span>
                   </div>
                 )}
               </div>

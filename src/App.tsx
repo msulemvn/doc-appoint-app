@@ -14,10 +14,15 @@ import AppointmentDetail from "./pages/appointment-detail";
 import NewAppointment from "./pages/new-appointment";
 import { useAuthStore } from "./stores/auth.store";
 import { useAuthInit } from "./hooks/use-auth-init";
+import { useEchoInit } from "./hooks/use-echo-init";
 import { ProtectedRoute } from "./components/protected-route";
+import { useNotifications } from "./hooks/useNotifications";
+import { Toaster } from "sonner";
 
 function App() {
   useAuthInit();
+  useNotifications();
+  useEchoInit();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
@@ -87,6 +92,7 @@ function App() {
           }
         />
       </Routes>
+      <Toaster richColors />
     </BrowserRouter>
   );
 }
