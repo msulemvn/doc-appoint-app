@@ -1,12 +1,18 @@
 import { useEffect } from "react";
-import { createEchoInstance } from "@/lib/echo";
+import { getEchoInstance } from "@/lib/echo";
 import { useAuthStore } from "@/stores/auth.store";
 import { useNotificationStore } from "@/stores/notification.store";
 import { toast } from "sonner";
-import type { Appointment } from "@/types";
+import type { Appointment, Message, Chat } from "@/types";
+import type { Notification } from "@/stores/notification.store";
 
 interface AppointmentEvent {
   appointment: Appointment;
+}
+
+interface MessageSentEvent {
+  message: Message;
+  chat: Chat;
 }
 
 const getDisplayName = (
@@ -28,7 +34,11 @@ export const useNotifications = () => {
       return;
     }
 
-    const echo = createEchoInstance();
+    const echo = getEchoInstance();
+    if (!echo) {
+      return;
+    }
+
     const channelName = `users.${user.id}`;
     const channel = echo.private(channelName);
 
@@ -91,10 +101,73 @@ export const useNotifications = () => {
         } else {
           toast.info(message);
         }
+      })
+      .listen(".message.sent", async (event: MessageSentEvent) => {
+        const { message } = event;
+
+        if (!message || message.sender.id === user.id) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/notifications`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          });
+
+          if (response.ok) {
+            const notifications = await response.json();
+            const messageNotification = notifications.find(
+              (n: { type: string; data: { message_id?: number } }) =>
+                n.type === "App\\Notifications\\MessageSentNotification" &&
+                n.data.message_id === message.id
+            );
+
+            if (messageNotification) {
+              addNotification({
+                id: messageNotification.id,
+                userId: user.id,
+                type: messageNotification.type,
+                data: messageNotification.data,
+                read_at: messageNotification.read_at,
+                created_at: messageNotification.created_at,
+                updated_at: messageNotification.updated_at,
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch notification:", error);
+        }
+      })
+      .listen(".notification.created", (event: { id: string; type: string; data: Record<string, unknown>; created_at: string; updated_at: string; read_at: string | null }) => {
+        const notification: Notification = {
+          id: event.id,
+          userId: user.id,
+          type: event.type,
+          data: event.data,
+          read_at: event.read_at,
+          created_at: event.created_at || new Date().toISOString(),
+          updated_at: event.updated_at || new Date().toISOString(),
+        };
+
+        addNotification(notification);
+
+        if (notification.type !== "App\\Notifications\\MessageSentNotification") {
+          const notificationData = notification.data as {
+            message?: string;
+          };
+
+          if (notificationData.message) {
+            toast.info(notificationData.message);
+          }
+        }
       });
 
     return () => {
-      echo.leave(channelName);
+      if (echo) {
+        echo.leave(channelName);
+      }
     };
   }, [user, isAuthenticated, addNotification]);
 };

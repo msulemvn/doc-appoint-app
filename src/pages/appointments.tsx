@@ -10,6 +10,7 @@ import {
   type BreadcrumbItem,
   type Appointment,
   type AppointmentStatus,
+  type Channel,
 } from "@/types";
 import { Calendar, Clock, Plus, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,7 +53,6 @@ export default function Appointments() {
 
   const handleTabChange = (value: string) => {
     if (value === "pending") {
-      // Default tab
       searchParams.delete("status");
     } else {
       searchParams.set("status", value);
@@ -64,7 +64,7 @@ export default function Appointments() {
     try {
       setLoading(true);
       setError(null);
-      const data = await appointmentService.getAppointments(); // Fetch all appointments
+      const data = await appointmentService.getAppointments();
       setAllAppointments(data);
     } catch (err) {
       setError(
@@ -77,13 +77,13 @@ export default function Appointments() {
 
   useEffect(() => {
     fetchAllAppointments();
-  }, [fetchAllAppointments]); // Re-run effect when user changes
+  }, [fetchAllAppointments]);
 
   useEffect(() => {
     if (!user || !window.Echo) return;
 
     const channelName = `users.${user.id}`;
-    const channel = window.Echo.private(channelName);
+    const channel: Channel = window.Echo.private(channelName);
 
     const handleStatusUpdate = (e: { appointment?: Appointment }) => {
       if (!e.appointment) {

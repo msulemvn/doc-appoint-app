@@ -35,9 +35,12 @@ export function NavFooter({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {item.icon && (
-                    <Icon iconNode={item.icon} className="h-5 w-5" />
-                  )}
+                  {item.icon &&
+                    (typeof item.icon === "string" ? (
+                      <Icon name={item.icon} className="h-5 w-5" />
+                    ) : (
+                      <Icon iconNode={item.icon} className="h-5 w-5" />
+                    ))}
                   <span>{item.title}</span>
                 </a>
               </SidebarMenuButton>

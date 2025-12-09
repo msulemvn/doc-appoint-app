@@ -25,6 +25,7 @@ import {
   AlertCircle,
   Clock,
   MapPin,
+  DollarSign,
 } from "lucide-react";
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -454,9 +455,10 @@ function DoctorCard({ doctor }: DoctorCardProps) {
         <div className="w-full md:w-72">
           <div className="flex flex-col gap-4">
             <div className="text-center">
-              <span className="text-3xl font-bold text-primary">
-                Rs. {doctor.consultation_fee || "150.00"}
-              </span>
+              <div className="flex items-center justify-center text-4xl font-bold text-primary gap-1">
+                <DollarSign className="h-8 w-8 text-primary" />
+                <span>{doctor.consultation_fee || "150.00"}</span>
+              </div>
               <p className="text-muted-foreground text-sm mt-1">
                 Consultation Fee
               </p>

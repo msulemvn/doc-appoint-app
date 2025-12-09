@@ -25,11 +25,10 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
     cleanup();
     try {
       await authService.logout();
-    } catch {
-      // Ignore logout API errors - user is already logged out locally
+    } finally {
+      clearAuth();
+      navigate("/login");
     }
-    clearAuth();
-    navigate("/login");
   };
 
   return (

@@ -1,3 +1,4 @@
+import { Icon } from "@/components/icon";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -24,7 +25,11 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
               tooltip={{ children: item.title }}
             >
               <Link to={resolveUrl(item.href)}>
-                {item.icon && <item.icon />}
+                {typeof item.icon === "string" ? (
+                  <Icon name={item.icon} />
+                ) : (
+                  item.icon && <item.icon />
+                )}
                 <span>{item.title}</span>
               </Link>
             </SidebarMenuButton>

@@ -1,9 +1,6 @@
 import { api } from "@/lib/api/client";
 import type { LoginInput, RegisterInput } from "@/lib/schemas/auth.schema";
-import type {
-  UpdateProfileInput,
-  // UpdatePasswordInput,
-} from "@/lib/schemas/profile.schema";
+import type { UpdateProfileInput } from "@/lib/schemas/profile.schema";
 import type { AuthResponse, User } from "@/types";
 
 export const authService = {
@@ -33,12 +30,6 @@ export const authService = {
     }
     return api.put<{ user: User; message: string }>("/profile", payload);
   },
-
-  // updatePassword: async (
-  //   data: UpdatePasswordInput
-  // ): Promise<{ message: string }> => {
-  //   return api.put<{ message: string }>('/profile', data);
-  // },
 
   refresh: async (): Promise<AuthResponse> => {
     return api.post<AuthResponse>("/refresh");

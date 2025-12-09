@@ -7,13 +7,19 @@ import { Button } from "./ui/button";
 import { Bell } from "lucide-react";
 import { useNotificationStore } from "@/stores/notification.store";
 import { useAuthStore } from "@/stores/auth.store";
+import { markNotificationAsRead } from "@/services/notification.service";
 
 export function NotificationModal() {
   const { notifications, markAsRead, unreadCount } = useNotificationStore();
   const { user } = useAuthStore();
 
-  const handleMarkAsRead = (id: string | number) => {
-    markAsRead(id);
+  const handleMarkAsRead = async (id: string | number) => {
+    try {
+      await markNotificationAsRead(String(id));
+      markAsRead(id);
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
   };
 
   return (
@@ -36,27 +42,75 @@ export function NotificationModal() {
           </p>
         </div>
         <div className="mt-4 space-y-4 max-h-60 overflow-y-auto">
+          {notifications.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No notifications yet
+            </p>
+          )}
           {notifications
             .filter((notification) => notification.userId === user?.id)
-            .map((notification) => (
-              <div
-                key={notification.id}
-                className="flex items-start justify-between"
-              >
-                <p className="text-sm">
-                  {notification.data.message && notification.data.message}
-                </p>
-                {!notification.read_at && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleMarkAsRead(notification.id)}
-                  >
-                    Mark as read
-                  </Button>
-                )}
-              </div>
-            ))}
+            .map((notification) => {
+              const getNotificationMessage = () => {
+                if (notification.data.message) {
+                  return notification.data.message as string;
+                }
+
+                if (notification.type === "App\\Notifications\\MessageSentNotification") {
+                  const data = notification.data as {
+                    sender_name?: string;
+                    content?: string;
+                    file?: string;
+                  };
+                  const messageText = data.content
+                    ? data.content
+                    : data.file
+                      ? "📎 Sent an attachment"
+                      : "New message";
+                  return `New message from ${data.sender_name}: ${messageText}`;
+                }
+
+                if (notification.type === "App\\Notifications\\AppointmentCreatedNotification") {
+                  const data = notification.data as {
+                    patient_name?: string;
+                    doctor_name?: string;
+                  };
+                  return user?.role === "patient"
+                    ? `New appointment scheduled with Dr. ${data.doctor_name}`
+                    : `New appointment request from ${data.patient_name}`;
+                }
+
+                if (notification.type === "App\\Notifications\\AppointmentUpdatedNotification") {
+                  const data = notification.data as {
+                    patient_name?: string;
+                    doctor_name?: string;
+                    status?: string;
+                  };
+                  return user?.role === "patient"
+                    ? `Appointment with Dr. ${data.doctor_name} is now ${data.status}`
+                    : `Appointment with ${data.patient_name} is now ${data.status}`;
+                }
+
+                return "New notification";
+              };
+
+              return (
+                <div
+                  key={notification.id}
+                  className="flex items-start justify-between gap-2"
+                >
+                  <p className="text-sm flex-1">{getNotificationMessage()}</p>
+                  {!notification.read_at && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleMarkAsRead(notification.id)}
+                    >
+                      Mark as read
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
         </div>
       </PopoverContent>
     </Popover>

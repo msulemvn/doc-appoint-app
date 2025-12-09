@@ -32,7 +32,6 @@ export default function NewAppointment() {
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorWithUser>();
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSelectingDoctor, setIsSelectingDoctor] = useState(true);
 
   const getInitials = useInitials();
 
@@ -93,7 +92,6 @@ export default function NewAppointment() {
         return;
       }
 
-      // Format the date to "YYYY-MM-DD HH:mm:ss"
       const formattedDate = formatDate(appointmentDate);
 
       await appointmentService.createAppointment({
@@ -121,14 +119,10 @@ export default function NewAppointment() {
           const doctor = doctors.find((d) => d.id === Number(id));
           if (doctor) {
             setSelectedDoctor(doctor);
-            setIsSelectingDoctor(false);
           } else {
-            // Handle case where id is invalid
             navigate("/appointments/new", { replace: true });
-            setIsSelectingDoctor(true);
           }
-        } else {
-          setIsSelectingDoctor(true);
+
         }
       } catch (_error) {
         handleApiError(_error);
@@ -142,7 +136,6 @@ export default function NewAppointment() {
 
   const handleDoctorSelect = (doctor: DoctorWithUser) => {
     setSelectedDoctor(doctor);
-    setIsSelectingDoctor(false);
     navigate(`/appointments/${doctor.id}/new`, { replace: true });
   };
 
@@ -160,92 +153,55 @@ export default function NewAppointment() {
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="rounded-lg border p-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="mb-4 text-xl font-semibold">
-                    {isSelectingDoctor ? "Select a Doctor" : "Selected Doctor"}
-                  </h2>
-                  {!isSelectingDoctor && selectedDoctor && (
-                    <Button
-                      type="button"
-                      onClick={() => setIsSelectingDoctor(true)}
-                      className="bg-black text-white hover:bg-gray-800"
-                    >
-                      Change
-                    </Button>
-                  )}
-                  {isSelectingDoctor && selectedDoctor && (
-                    <Button
-                      type="button"
-                      onClick={() => setIsSelectingDoctor(false)}
-                      className="bg-black text-white hover:bg-gray-800"
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-                <div className="max-h-60 overflow-y-auto pr-2">
-                  {loading ? (
-                    <div className="flex w-full items-center gap-4 rounded-lg border p-4">
-                      <Skeleton className="h-12 w-12 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-[150px]" />
-                        <Skeleton className="h-4 w-[100px]" />
+                <div className="space-y-2">
+                  <Label>Select a Doctor</Label>
+                  <div className="max-h-60 overflow-y-auto pr-2">
+                    {loading ? (
+                      <div className="flex w-full items-center gap-4 rounded-lg border p-4">
+                        <Skeleton className="h-12 w-12 rounded-full" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-[150px]" />
+                          <Skeleton className="h-4 w-[100px]" />
+                        </div>
                       </div>
-                    </div>
-                  ) : !isSelectingDoctor && selectedDoctor ? (
-                    <div className="flex w-full items-center gap-4 rounded-lg border p-4">
-                      <Avatar className="h-12 w-12">
-                        {selectedDoctor.user?.avatar && (
-                          <AvatarImage
-                            src={selectedDoctor.user?.avatar}
-                            alt={selectedDoctor.user?.name}
-                          />
-                        )}
-                        <AvatarFallback>
-                          {getInitials(selectedDoctor.user?.name ?? "")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-semibold">
-                          {selectedDoctor.user?.name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedDoctor.specialization}
-                        </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {doctors.map((doctor) => (
+                          <Button
+                            key={doctor.id}
+                            type="button"
+                            variant={
+                              selectedDoctor?.id === doctor.id
+                                ? "default"
+                                : "outline"
+                            }
+                            className="flex items-center gap-4 justify-start h-auto"
+                            onClick={() => handleDoctorSelect(doctor)}
+                          >
+                            <Avatar className="h-12 w-12">
+                              {doctor.user?.avatar && (
+                                <AvatarImage
+                                  src={doctor.user?.avatar}
+                                  alt={doctor.user?.name}
+                                />
+                              )}
+                              <AvatarFallback>
+                                {getInitials(doctor.user?.name ?? "")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 text-left">
+                              <h3 className="font-semibold">
+                                {doctor.user?.name}
+                              </h3>
+                              <p className="text-sm text-muted-foreground">
+                                {doctor.specialization}
+                              </p>
+                            </div>
+                          </Button>
+                        ))}
                       </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {doctors.map((doctor) => (
-                        <button
-                          key={doctor.id}
-                          className="flex w-full items-center gap-4 rounded-lg border p-4 text-left transition-colors hover:bg-muted"
-                          onClick={() => handleDoctorSelect(doctor)}
-                          disabled={selectedDoctor?.id === doctor.id}
-                        >
-                          <Avatar className="h-12 w-12">
-                            {doctor.user?.avatar && (
-                              <AvatarImage
-                                src={doctor.user?.avatar}
-                                alt={doctor.user?.name}
-                              />
-                            )}
-                            <AvatarFallback>
-                              {getInitials(doctor.user?.name ?? "")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h3 className="font-semibold">
-                              {doctor.user?.name}
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                              {doctor.specialization}
-                            </p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
 

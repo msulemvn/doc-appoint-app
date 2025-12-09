@@ -230,8 +230,8 @@ export default function DoctorDetail() {
                   <CardTitle>Consultation Fee</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-baseline gap-2">
-                    <DollarSign className="h-6 w-6 text-primary" />
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="h-7 w-7 text-primary" />
                     <span className="text-3xl font-bold">
                       {doctor.consultation_fee}
                     </span>

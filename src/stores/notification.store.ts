@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 
 export type Notification = {
   id: string | number;
-  userId: number; // Added userId
+  userId: number;
   type: string;
   data: { message: string; [key: string]: unknown };
   read_at: string | null;

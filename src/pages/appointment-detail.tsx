@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useInitials } from "@/hooks/use-initials";
 import { useAuthStore } from "@/stores/auth.store";
 import { appointmentService } from "@/services/appointment.service";
-import { type BreadcrumbItem, type Appointment } from "@/types";
+import { type BreadcrumbItem, type Appointment, type Channel } from "@/types";
 import {
   Calendar,
   Clock,
@@ -16,7 +16,9 @@ import {
   CheckCircle,
   XCircle,
   User,
+  MessageCircle,
 } from "lucide-react";
+import { startConversation } from "@/services/chat.service";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +40,7 @@ export default function AppointmentDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [isStartingChat, setIsStartingChat] = useState(false);
   const isDoctor = user?.role === "doctor";
 
   useEffect(() => {
@@ -61,7 +64,7 @@ export default function AppointmentDetail() {
     if (!user?.id || !window.Echo) return;
 
     const channelName = `users.${user.id}`;
-    const channel = window.Echo.private(channelName);
+    const channel: Channel = window.Echo.private(channelName);
 
     const handleRealtimeUpdate = (e: { appointment: Appointment }) => {
       if (e.appointment.id === Number(id)) {
@@ -103,6 +106,26 @@ export default function AppointmentDetail() {
   };
 
   const handleCancel = () => handleStatusUpdate("cancelled");
+
+  const handleStartChat = async () => {
+    if (!appointment) return;
+
+    const otherUserId = isDoctor
+      ? appointment.patient?.user?.id
+      : appointment.doctor?.user?.id;
+
+    if (!otherUserId) return;
+
+    setIsStartingChat(true);
+    try {
+      const chat = await startConversation(otherUserId);
+      navigate(`/chats/${chat.uuid}`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to start chat");
+    } finally {
+      setIsStartingChat(false);
+    }
+  };
 
   const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -167,6 +190,8 @@ export default function AppointmentDetail() {
   const canComplete = isDoctor && appointment.status === "confirmed";
   const canCancel =
     appointment.status !== "cancelled" && appointment.status !== "completed";
+  const canChat =
+    appointment.status === "pending" || appointment.status === "confirmed";
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -334,6 +359,24 @@ export default function AppointmentDetail() {
             <div className="rounded-lg border p-6">
               <h3 className="mb-4 font-semibold">Quick Actions</h3>
               <div className="space-y-2">
+                {canChat && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleStartChat}
+                    disabled={isStartingChat}
+                  >
+                    {isStartingChat ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                    )}
+                    Chat with{" "}
+                    {isDoctor
+                      ? appointment.patient?.user?.name
+                      : appointment.doctor?.user?.name}
+                  </Button>
+                )}
                 {!isDoctor && appointment.doctor && (
                   <Button variant="outline" className="w-full" asChild>
                     <Link to={`/doctors/${appointment.doctor.id}`}>

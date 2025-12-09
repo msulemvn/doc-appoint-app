@@ -154,3 +154,89 @@ export const api = {
       method: "DELETE",
     }),
 };
+
+export async function apiFormDataRequest<T>(
+  endpoint: string,
+  data?: FormData,
+  options?: RequestInit,
+): Promise<T> {
+  let token = localStorage.getItem("token");
+
+  const config: RequestInit = {
+    ...options,
+    method: "POST", // FormData is typically for POST
+    headers: {
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options?.headers,
+    },
+    body: data,
+  };
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+
+  if (response.status === 401 && endpoint !== "/refresh") {
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      })
+        .then(() => {
+          token = localStorage.getItem("token");
+          const newConfig = {
+            ...options,
+            method: "POST",
+            headers: {
+              ...(token && { Authorization: `Bearer ${token}` }),
+              ...options?.headers,
+            },
+            body: data,
+          };
+          return apiFormDataRequest<T>(endpoint, data, newConfig);
+        })
+        .catch((err) => {
+          return Promise.reject(err);
+        });
+    }
+
+    isRefreshing = true;
+
+    return new Promise((resolve, reject) => {
+      fetch(`${API_BASE_URL}/refresh`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      })
+        .then((res) => res.json())
+        .then((res) => {
+          if (res.status === "success" && res.data?.token) {
+            const newToken = res.data.token;
+            useAuthStore.getState().setAuth(res.data.user, newToken);
+            processQueue(null);
+            resolve(apiFormDataRequest<T>(endpoint, data, options));
+          } else {
+            useAuthStore.getState().clearAuth();
+            toast.error("Session expired. Please login again.");
+            processQueue(new ApiError("Session expired", 401));
+            reject(new ApiError("Session expired", 401));
+          }
+        })
+        .catch((err) => {
+          useAuthStore.getState().clearAuth();
+          toast.error("Session expired. Please login again.");
+          processQueue(err);
+          reject(err);
+        })
+        .finally(() => {
+          isRefreshing = false;
+        });
+    });
+  }
+
+  return handleResponse<T>(response);
+}
+
+export const apiFormData = {
+  post: <T>(endpoint: string, data: FormData) =>
+    apiFormDataRequest<T>(endpoint, data),
+};

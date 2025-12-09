@@ -1,20 +1,18 @@
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
-import { useAuthStore } from "@/stores/auth.store";
 
 declare global {
   interface Window {
     Pusher: typeof Pusher;
-    Echo: Echo<any>;
   }
 }
 
 window.Pusher = Pusher;
 Pusher.logToConsole = import.meta.env.DEV;
 
-export const createEchoInstance = () => {
-  const token = useAuthStore.getState().token;
+let echoInstance: Echo<Pusher> | null = null;
 
+const _createEchoInstance = (token: string) => {
   return new Echo({
     broadcaster: "reverb",
     key: import.meta.env.VITE_REVERB_APP_KEY,
@@ -23,6 +21,7 @@ export const createEchoInstance = () => {
     wssPort: import.meta.env.VITE_REVERB_PORT,
     forceTLS: import.meta.env.VITE_REVERB_SCHEME === "https",
     enabledTransports: ["ws", "wss"],
+    enableStats: false,
     authEndpoint: `${import.meta.env.VITE_API_URL}/broadcasting/auth`,
     auth: {
       headers: {
@@ -32,12 +31,24 @@ export const createEchoInstance = () => {
   });
 };
 
-export const disconnect = () => {
-
-  if (window.Echo) {
-
-    window.Echo.disconnect();
-
+export const initEcho = (token: string | null) => {
+  if (echoInstance) {
+    echoInstance.disconnect();
+    echoInstance = null;
   }
 
+  if (token) {
+    echoInstance = _createEchoInstance(token);
+  }
+};
+
+export const getEchoInstance = (): Echo<Pusher> | null => {
+  return echoInstance;
+};
+
+export const disconnectEcho = () => {
+  if (echoInstance) {
+    echoInstance.disconnect();
+    echoInstance = null;
+  }
 };

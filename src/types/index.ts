@@ -1,4 +1,9 @@
-import { type LucideIcon } from "lucide-react";
+import { type LucideProps } from "lucide-react";
+import { type ComponentType } from "react";
+import type Echo from "laravel-echo";
+import type { Channel } from "pusher-js";
+
+export type { Echo, Channel };
 
 export interface Patient {
   id: number;
@@ -44,7 +49,7 @@ export interface User {
 export interface NavItem {
   title: string;
   href: string | { url: string };
-  icon?: LucideIcon;
+  icon?: string | ComponentType<LucideProps>;
 }
 
 export interface BreadcrumbItem {
@@ -96,4 +101,49 @@ export interface UpdateAppointmentStatusInput {
 export interface AppointmentStatusUpdatedEvent {
   appointment: Appointment;
   user: User;
+}
+
+export interface ChatListItem {
+  id: number;
+  uuid: string;
+  user1?: User;
+  user2?: User;
+  users?: User[];
+  last_message?: Message;
+  unread_count?: number;
+  status: "active" | "closed";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Chat {
+  id: number;
+  uuid: string;
+  user1: User;
+  user2: User;
+  last_message?: Message;
+  last_message_id?: number;
+  messages: Message[];
+  status: "active" | "closed";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Message {
+  id: number;
+  chat_id: number;
+  user_id: number;
+  content: string;
+  file?: string;
+  file_url?: string;
+  read_at?: string;
+  created_at: string;
+  updated_at: string;
+  sender: User;
+}
+
+export interface SendMessagePayload {
+  chat_id: number;
+  message: string;
+  file?: File;
 }

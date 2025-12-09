@@ -40,11 +40,8 @@ export default function Login() {
       setAuth(response.user, response.access_token);
       navigate(from, { replace: true });
     } catch (error) {
-      const customSetError = (
-        name: any,
-        error: { message: string },
-      ) => {
-        form.setError(name, { message: error.message });
+      const customSetError = (name: string, error: { message: string }) => {
+        form.setError(name as keyof LoginInput, { message: error.message });
       };
       handleApiError(error, customSetError);
     }

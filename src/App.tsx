@@ -14,15 +14,19 @@ import AppointmentDetail from "./pages/appointment-detail";
 import NewAppointment from "./pages/new-appointment";
 import { useAuthStore } from "./stores/auth.store";
 import { useAuthInit } from "./hooks/use-auth-init";
-import { useEchoInit } from "./hooks/use-echo-init";
+import { useEchoSetup } from "./hooks/use-echo-setup";
 import { ProtectedRoute } from "./components/protected-route";
 import { useNotifications } from "./hooks/useNotifications";
+import { useNotificationsInit } from "./hooks/use-notifications-init";
+import ChatDetailPage from "./pages/chat-detail";
+import ChatsPage from "./pages/chats";
 import { Toaster } from "sonner";
 
 function App() {
   useAuthInit();
   useNotifications();
-  useEchoInit();
+  useNotificationsInit();
+  useEchoSetup();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
@@ -88,6 +92,22 @@ function App() {
           element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chats"
+          element={
+            <ProtectedRoute>
+              <ChatsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chats/:id"
+          element={
+            <ProtectedRoute>
+              <ChatDetailPage />
             </ProtectedRoute>
           }
         />
