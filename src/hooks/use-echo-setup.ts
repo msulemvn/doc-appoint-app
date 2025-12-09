@@ -13,17 +13,7 @@ export const useEchoSetup = () => {
       disconnectEcho();
     }
 
-    const unsubscribe = useAuthStore.subscribe((state) => {
-      const newToken = state.token;
-      if (state.isAuthenticated && newToken) {
-        initEcho(newToken);
-      } else {
-        disconnectEcho();
-      }
-    });
-
     return () => {
-      unsubscribe();
       disconnectEcho();
     };
   }, [isAuthenticated, token]);

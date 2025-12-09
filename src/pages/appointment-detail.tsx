@@ -72,8 +72,7 @@ export default function AppointmentDetail() {
       }
     };
 
-    channel
-      .listen(".appointment.status.updated", handleRealtimeUpdate);
+    channel.listen(".appointment.status.updated", handleRealtimeUpdate);
 
     return () => {
       if (window.Echo) {

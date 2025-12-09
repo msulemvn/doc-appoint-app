@@ -75,7 +75,7 @@ export default function ChatsPage() {
               };
             }
             return c;
-          })
+          }),
         );
       };
 
@@ -89,7 +89,7 @@ export default function ChatsPage() {
     return () => {
       listeners.forEach((cleanup) => cleanup());
     };
-  }, [chats.length, user?.id]);
+  }, [chats, user?.id]);
 
   const getOtherUser = (chat: ChatListItem): User | undefined => {
     if (chat.users && Array.isArray(chat.users)) {

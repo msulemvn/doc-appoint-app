@@ -2,8 +2,9 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type Notification = {
-  id: string | number;
-  userId: number;
+  id: string;
+  notifiable_id: number;
+  notifiable_type: string;
   type: string;
   data: { message: string; [key: string]: unknown };
   read_at: string | null;
@@ -28,6 +29,12 @@ export const useNotificationStore = create<NotificationState>()(
       unreadCount: 0,
       addNotification: (notification) =>
         set((state) => {
+          const exists = state.notifications.some(
+            (notif) => notif.id === notification.id,
+          );
+          if (exists) {
+            return state;
+          }
           const newNotifications = [notification, ...state.notifications];
           return {
             notifications: newNotifications,

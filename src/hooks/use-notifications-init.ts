@@ -16,19 +16,8 @@ export const useNotificationsInit = () => {
 
       try {
         const notifications = await getNotifications();
-        const mappedNotifications = notifications.map((notif) => ({
-          id: notif.id,
-          userId: user.id,
-          type: notif.type,
-          data: notif.data,
-          read_at: notif.read_at,
-          created_at: notif.created_at,
-          updated_at: notif.updated_at,
-        }));
-        setNotifications(mappedNotifications);
-      } catch (error) {
-        console.error("Failed to fetch notifications:", error);
-      }
+        setNotifications(notifications);
+      } catch (_error) {}
     };
 
     fetchNotifications();

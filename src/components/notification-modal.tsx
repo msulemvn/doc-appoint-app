@@ -17,9 +17,7 @@ export function NotificationModal() {
     try {
       await markNotificationAsRead(String(id));
       markAsRead(id);
-    } catch (error) {
-      console.error("Failed to mark notification as read:", error);
-    }
+    } catch (_error) {}
   };
 
   return (
@@ -48,14 +46,25 @@ export function NotificationModal() {
             </p>
           )}
           {notifications
-            .filter((notification) => notification.userId === user?.id)
+            .filter((notification) => notification.notifiable_id === user?.id)
             .map((notification) => {
               const getNotificationMessage = () => {
+                const typeMap: Record<string, string> = {
+                  "App\\Notifications\\AppointmentCreatedNotification":
+                    "appointment.created",
+                  "App\\Notifications\\AppointmentStatusUpdatedNotification":
+                    "appointment.status.updated",
+                  "App\\Notifications\\MessageSentNotification": "message.sent",
+                };
+
+                const notificationType =
+                  typeMap[notification.type] || notification.type;
+
                 if (notification.data.message) {
                   return notification.data.message as string;
                 }
 
-                if (notification.type === "App\\Notifications\\MessageSentNotification") {
+                if (notificationType === "message.sent") {
                   const data = notification.data as {
                     sender_name?: string;
                     content?: string;
@@ -69,7 +78,7 @@ export function NotificationModal() {
                   return `New message from ${data.sender_name}: ${messageText}`;
                 }
 
-                if (notification.type === "App\\Notifications\\AppointmentCreatedNotification") {
+                if (notificationType === "appointment.created") {
                   const data = notification.data as {
                     patient_name?: string;
                     doctor_name?: string;
@@ -79,7 +88,7 @@ export function NotificationModal() {
                     : `New appointment request from ${data.patient_name}`;
                 }
 
-                if (notification.type === "App\\Notifications\\AppointmentUpdatedNotification") {
+                if (notificationType === "appointment.status.updated") {
                   const data = notification.data as {
                     patient_name?: string;
                     doctor_name?: string;

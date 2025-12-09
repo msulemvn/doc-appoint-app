@@ -19,10 +19,14 @@ const schema = z
     message: z.string().optional(),
     file: z.any().optional(),
   })
-  .refine((data) => (data.message && data.message.trim().length > 0) || data.file?.[0], {
-    message: "Either a message or a file is required",
-    path: ["message"],
-  });
+  .refine(
+    (data) =>
+      (data.message && data.message.trim().length > 0) || data.file?.[0],
+    {
+      message: "Either a message or a file is required",
+      path: ["message"],
+    },
+  );
 
 interface ChatProps {
   chat: Chat;

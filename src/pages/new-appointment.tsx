@@ -122,7 +122,6 @@ export default function NewAppointment() {
           } else {
             navigate("/appointments/new", { replace: true });
           }
-
         }
       } catch (_error) {
         handleApiError(_error);

@@ -22,7 +22,7 @@ const _createEchoInstance = (token: string) => {
     forceTLS: import.meta.env.VITE_REVERB_SCHEME === "https",
     enabledTransports: ["ws", "wss"],
     enableStats: false,
-    authEndpoint: `${import.meta.env.VITE_API_URL}/broadcasting/auth`,
+    authEndpoint: `${import.meta.env.VITE_APP_URL}/api/broadcasting/auth`,
     auth: {
       headers: {
         Authorization: `Bearer ${token}`,

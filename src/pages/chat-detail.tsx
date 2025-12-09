@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { getChat } from "@/services/chat.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-
 import { ChatBox } from "@/components/chat";
 import { useAuthStore } from "@/stores/auth.store";
 import { ChatAvatar } from "@/components/ui/chat-avatar";
@@ -23,7 +22,6 @@ export default function ChatDetailPage() {
 
   const getOtherUser = (currentChat: Chat): User | null => {
     if (!user?.id || (!currentChat.user1 && !currentChat.user2)) {
-
       return null;
     }
 
@@ -66,8 +64,6 @@ export default function ChatDetailPage() {
 
     fetchChatDetail();
   }, [uuid]);
-
-
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>

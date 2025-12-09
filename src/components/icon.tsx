@@ -34,9 +34,7 @@ export function Icon({
   }
 
   if (IconComponent) {
-    return (
-      <IconComponent className={cn("h-4 w-4", className)} {...props} />
-    );
+    return <IconComponent className={cn("h-4 w-4", className)} {...props} />;
   }
 
   return <div className="h-4 w-4" />;
