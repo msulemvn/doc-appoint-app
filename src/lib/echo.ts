@@ -4,6 +4,7 @@ import Pusher from "pusher-js";
 declare global {
   interface Window {
     Pusher: typeof Pusher;
+    Echo: Echo<Pusher> | null;
   }
 }
 
@@ -35,10 +36,12 @@ export const initEcho = (token: string | null) => {
   if (echoInstance) {
     echoInstance.disconnect();
     echoInstance = null;
+    window.Echo = null;
   }
 
   if (token) {
     echoInstance = _createEchoInstance(token);
+    window.Echo = echoInstance;
   }
 };
 
@@ -50,5 +53,6 @@ export const disconnectEcho = () => {
   if (echoInstance) {
     echoInstance.disconnect();
     echoInstance = null;
+    window.Echo = null;
   }
 };

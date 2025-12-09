@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import { getEchoInstance } from "@/lib/echo";
 import { useAuthStore } from "@/stores/auth.store";
 import { useNotificationStore } from "@/stores/notification.store";
@@ -73,6 +73,7 @@ export const useNotifications = () => {
     };
 
     const handleAppointmentStatusUpdated = (event: AppointmentEvent) => {
+      console.log("[Notifications] Appointment status updated event:", event);
       const appointment = event.appointment;
       const isPatient = user.role === "patient";
       const doctorName = getDisplayName(appointment.doctor);
@@ -90,6 +91,7 @@ export const useNotifications = () => {
     };
 
     const handleMessageSent = (event: MessageSentEvent) => {
+      console.log("[Notifications] Message sent event:", event);
       const { message, sender } = event;
 
       if (!message || message.sender.id === user.id) {
@@ -106,12 +108,35 @@ export const useNotifications = () => {
       fetchLatestNotification();
     };
 
+    const handleNotification = (notification: Notification) => {
+      console.log("[Notifications] Notification received:", notification);
+      addNotification(notification);
+      if (notification.data?.message) {
+        toast.info(notification.data.message);
+      }
+    };
+
     channel
       .listen(".appointment.created", handleAppointmentCreated)
       .listen(".appointment.status.updated", handleAppointmentStatusUpdated)
-      .listen(".message.sent", handleMessageSent);
+      .listen(".message.sent", handleMessageSent)
+      .notification(handleNotification);
+
+    console.log(
+      "[Notifications] All listeners attached to channel:",
+      channelName,
+    );
+
+    channel.subscribed(() => {
+      console.log("[Notifications] Successfully subscribed to:", channelName);
+    });
+
+    channel.error((error: Error) => {
+      console.error("[Notifications] Channel error:", error);
+    });
 
     return () => {
+      console.log("[Notifications] Cleaning up listeners for:", channelName);
       channel
         .stopListening(".appointment.created", handleAppointmentCreated)
         .stopListening(

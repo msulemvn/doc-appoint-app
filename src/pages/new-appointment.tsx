@@ -35,6 +35,17 @@ export default function NewAppointment() {
 
   const getInitials = useInitials();
 
+  useEffect(() => {
+    if (id && doctors.length > 0) {
+      const doctor = doctors.find((d) => d.id === Number(id));
+      if (doctor) {
+        setSelectedDoctor(doctor);
+      } else {
+        navigate("/appointments/new", { replace: true });
+      }
+    }
+  }, [id, doctors, navigate]);
+
   const breadcrumbs: BreadcrumbItem[] = [
     {
       title: "Dashboard",
@@ -114,15 +125,6 @@ export default function NewAppointment() {
       try {
         const { doctors } = await doctorService.getAvailableDoctors();
         setDoctors(doctors);
-
-        if (id) {
-          const doctor = doctors.find((d) => d.id === Number(id));
-          if (doctor) {
-            setSelectedDoctor(doctor);
-          } else {
-            navigate("/appointments/new", { replace: true });
-          }
-        }
       } catch (_error) {
         handleApiError(_error);
       } finally {
@@ -131,11 +133,10 @@ export default function NewAppointment() {
     };
 
     fetchDoctors();
-  }, [id, navigate]);
+  }, []);
 
   const handleDoctorSelect = (doctor: DoctorWithUser) => {
     setSelectedDoctor(doctor);
-    navigate(`/appointments/${doctor.id}/new`, { replace: true });
   };
 
   return (
