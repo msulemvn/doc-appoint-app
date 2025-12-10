@@ -1,3 +1,4 @@
+import { Channel } from "laravel-echo";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -16,7 +17,7 @@ import { getEchoInstance } from "@/lib/echo";
 
 const schema = z
   .object({
-    message: z.string().optional(),
+    message: z.string(),
     file: z.any().optional(),
   })
   .refine(
@@ -131,7 +132,7 @@ export function ChatBox({ chat: initialChat }: ChatProps) {
 
     if (!echo) return;
 
-    const channel = echo.private(`chats.${initialChat.id}`);
+    const channel: Channel = echo.private(`chats.${initialChat.id}`);
 
     const messageSentCallback = async (e: { message: Message }) => {
       const newMessage = e.message;
@@ -197,7 +198,7 @@ export function ChatBox({ chat: initialChat }: ChatProps) {
       <div className="border-t p-4">
         <MessageInput
           form={form}
-          onSubmit={form.handleSubmit(onSubmit)}
+          onSubmit={onSubmit}
           isLoading={isSendingMessage}
           disabled={initialChat.status === "closed"}
         />

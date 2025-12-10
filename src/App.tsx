@@ -16,8 +16,7 @@ import { useAuthStore } from "./stores/auth.store";
 import { useAuthInit } from "./hooks/use-auth-init";
 import { useEchoSetup } from "./hooks/use-echo-setup";
 import { ProtectedRoute } from "./components/protected-route";
-import { useNotifications } from "./hooks/useNotifications";
-import { useNotificationsInit } from "./hooks/use-notifications-init";
+import { useNotifications } from "./hooks/use-notifications";
 import ChatDetailPage from "./pages/chat-detail";
 import ChatsPage from "./pages/chats";
 import { Toaster } from "sonner";
@@ -25,7 +24,6 @@ import { Toaster } from "sonner";
 function App() {
   useAuthInit();
   useNotifications();
-  useNotificationsInit();
   useEchoSetup();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 

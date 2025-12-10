@@ -3,6 +3,8 @@ import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { type LucideProps } from "lucide-react";
 import { type ComponentType, lazy, Suspense } from "react";
 
+type IconName = keyof typeof dynamicIconImports;
+
 export interface IconProps extends Omit<LucideProps, "ref"> {
   name?: string;
   iconNode?: ComponentType<LucideProps>;
@@ -12,7 +14,7 @@ const lazyIconCache = new Map<string, ComponentType<LucideProps>>();
 
 function getOrCreateLazyIcon(name: string): ComponentType<LucideProps> {
   if (!lazyIconCache.has(name)) {
-    lazyIconCache.set(name, lazy(dynamicIconImports[name]));
+    lazyIconCache.set(name, lazy(dynamicIconImports[name as IconName]));
   }
   return lazyIconCache.get(name)!;
 }

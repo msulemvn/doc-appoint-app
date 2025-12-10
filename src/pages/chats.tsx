@@ -16,6 +16,7 @@ import AppLayout from "@/layouts/app-layout";
 import { type BreadcrumbItem } from "@/types";
 import { MessageCircle } from "lucide-react";
 import { getEchoInstance } from "@/lib/echo";
+import { Channel } from "laravel-echo";
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -57,7 +58,7 @@ export default function ChatsPage() {
     chats.forEach((chat) => {
       if (!chat.id) return;
 
-      const channel = echo.private(`chats.${chat.id}`);
+      const channel: Channel = echo.private(`chats.${chat.id}`);
 
       const messageSentCallback = (e: { message: Message }) => {
         const newMessage = e.message;

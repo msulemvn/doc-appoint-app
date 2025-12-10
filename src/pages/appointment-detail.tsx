@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useInitials } from "@/hooks/use-initials";
 import { useAuthStore } from "@/stores/auth.store";
 import { appointmentService } from "@/services/appointment.service";
-import { type BreadcrumbItem, type Appointment, type Channel } from "@/types";
+import { type BreadcrumbItem, type Appointment } from "@/types";
 import {
   Calendar,
   Clock,
@@ -30,6 +30,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import Echo from "laravel-echo";
+import Pusher from "pusher-js";
+
+declare global {
+  interface Window {
+    Pusher: typeof Pusher;
+    Echo: Echo;
+  }
+}
 
 export default function AppointmentDetail() {
   const { id } = useParams();
@@ -63,8 +72,8 @@ export default function AppointmentDetail() {
 
     if (!user?.id || !window.Echo) return;
 
-    const channelName = `users.${user.id}`;
-    const channel: Channel = window.Echo.private(channelName);
+    const channelName = `App.Models.User.${user.id}`;
+    const channel = window.Echo.private(channelName);
 
     const handleRealtimeUpdate = (e: { appointment: Appointment }) => {
       if (e.appointment.id === Number(id)) {
@@ -84,12 +93,10 @@ export default function AppointmentDetail() {
       }
     };
   }, [id, user]);
-
   const handleStatusUpdate = async (
     status: "confirmed" | "cancelled" | "completed",
   ) => {
     if (!id || !appointment) return;
-
     try {
       setUpdating(true);
       const updatedAppointment =
@@ -103,22 +110,19 @@ export default function AppointmentDetail() {
       setUpdating(false);
     }
   };
-
   const handleCancel = () => handleStatusUpdate("cancelled");
-
   const handleStartChat = async () => {
     if (!appointment) return;
-
     const otherUserId = isDoctor
       ? appointment.patient?.user?.id
       : appointment.doctor?.user?.id;
-
     if (!otherUserId) return;
-
     setIsStartingChat(true);
     try {
       const chat = await startConversation(otherUserId);
-      navigate(`/chats/${chat.uuid}`);
+      if (chat) {
+        navigate(`/chats/${chat.uuid}`);
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to start chat");
     } finally {
@@ -292,7 +296,7 @@ export default function AppointmentDetail() {
                       )}
                       <div className="mt-1 flex items-center gap-2 text-sm">
                         <span
-                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${statusColors[appointment.status]}`}
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${statusColors[appointment.status as keyof typeof statusColors]}`}
                         >
                           {appointment.status}
                         </span>
@@ -356,7 +360,7 @@ export default function AppointmentDetail() {
             </div>
 
             <div className="rounded-lg border p-6">
-              <h3 className="mb-4 font-semibold">Quick Actions</h3>
+              .<h3 className="mb-4 font-semibold">Quick Actions</h3>
               <div className="space-y-2">
                 {canChat && (
                   <Button

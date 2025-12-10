@@ -10,11 +10,19 @@ import {
   type BreadcrumbItem,
   type Appointment,
   type AppointmentStatus,
-  type Channel,
 } from "@/types";
 import { Calendar, Clock, Plus, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import Echo from "laravel-echo";
+import Pusher from "pusher-js";
+
+declare global {
+  interface Window {
+    Pusher: typeof Pusher;
+    Echo: Echo;
+  }
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -82,8 +90,8 @@ export default function Appointments() {
   useEffect(() => {
     if (!user || !window.Echo) return;
 
-    const channelName = `users.${user.id}`;
-    const channel: Channel = window.Echo.private(channelName);
+    const channelName = `App.Models.User.${user.id}`;
+    const channel = window.Echo.private(channelName);
 
     const handleStatusUpdate = (e: { appointment?: Appointment }) => {
       if (!e.appointment) {
@@ -299,7 +307,7 @@ function AppointmentCard({
           </div>
           <div>
             <span
-              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${statusColors[appointment.status]}`}
+              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${statusColors[appointment.status as keyof typeof statusColors]}`}
             >
               {appointment.status}
             </span>

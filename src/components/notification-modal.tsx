@@ -10,14 +10,18 @@ import { useAuthStore } from "@/stores/auth.store";
 import { markNotificationAsRead } from "@/services/notification.service";
 
 export function NotificationModal() {
-  const { notifications, markAsRead, unreadCount } = useNotificationStore();
-  const { user } = useAuthStore();
+  const notifications = useNotificationStore((state) => state.notifications);
+  const markAsRead = useNotificationStore((state) => state.markAsRead);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const user = useAuthStore((state) => state.user);
 
   const handleMarkAsRead = async (id: string | number) => {
     try {
       await markNotificationAsRead(String(id));
       markAsRead(id);
-    } catch (_error) {}
+    } catch (_error) {
+      // TODO: Handle error
+    }
   };
 
   return (
@@ -45,81 +49,79 @@ export function NotificationModal() {
               No notifications yet
             </p>
           )}
-          {notifications
-            .filter((notification) => notification.notifiable_id === user?.id)
-            .map((notification) => {
-              const getNotificationMessage = () => {
-                const typeMap: Record<string, string> = {
-                  "App\\Notifications\\AppointmentCreatedNotification":
-                    "appointment.created",
-                  "App\\Notifications\\AppointmentStatusUpdatedNotification":
-                    "appointment.status.updated",
-                  "App\\Notifications\\MessageSentNotification": "message.sent",
-                };
-
-                const notificationType =
-                  typeMap[notification.type] || notification.type;
-
-                if (notification.data.message) {
-                  return notification.data.message as string;
-                }
-
-                if (notificationType === "message.sent") {
-                  const data = notification.data as {
-                    sender_name?: string;
-                    content?: string;
-                    file?: string;
-                  };
-                  const messageText = data.content
-                    ? data.content
-                    : data.file
-                      ? "📎 Sent an attachment"
-                      : "New message";
-                  return `New message from ${data.sender_name}: ${messageText}`;
-                }
-
-                if (notificationType === "appointment.created") {
-                  const data = notification.data as {
-                    patient_name?: string;
-                    doctor_name?: string;
-                  };
-                  return user?.role === "patient"
-                    ? `New appointment scheduled with Dr. ${data.doctor_name}`
-                    : `New appointment request from ${data.patient_name}`;
-                }
-
-                if (notificationType === "appointment.status.updated") {
-                  const data = notification.data as {
-                    patient_name?: string;
-                    doctor_name?: string;
-                    status?: string;
-                  };
-                  return user?.role === "patient"
-                    ? `Appointment with Dr. ${data.doctor_name} is now ${data.status}`
-                    : `Appointment with ${data.patient_name} is now ${data.status}`;
-                }
-
-                return "New notification";
+          {notifications.map((notification) => {
+            const getNotificationMessage = () => {
+              const typeMap: Record<string, string> = {
+                "App\\Notifications\\AppointmentCreatedNotification":
+                  "appointment.created",
+                "App\\Notifications\\AppointmentStatusUpdatedNotification":
+                  "appointment.status.updated",
+                "App\\Notifications\\MessageSentNotification": "message.sent",
               };
 
-              return (
-                <div
-                  key={notification.id}
-                  className="flex items-start justify-between gap-2"
-                >
-                  <p className="text-sm flex-1">{getNotificationMessage()}</p>
-                  {!notification.read_at && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleMarkAsRead(notification.id)}
-                    >
-                      Mark as read
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
+              const notificationType =
+                typeMap[notification.type] || notification.type;
+
+              if (notification.data.message) {
+                return notification.data.message as string;
+              }
+
+              if (notificationType === "message.sent") {
+                const data = notification.data as {
+                  sender_name?: string;
+                  content?: string;
+                  file?: string;
+                };
+                const messageText = data.content
+                  ? data.content
+                  : data.file
+                    ? "📎 Sent an attachment"
+                    : "New message";
+                return `New message from ${data.sender_name}: ${messageText}`;
+              }
+
+              if (notificationType === "appointment.created") {
+                const data = notification.data as {
+                  patient_name?: string;
+                  doctor_name?: string;
+                };
+                return user?.role === "patient"
+                  ? `New appointment scheduled with Dr. ${data.doctor_name}`
+                  : `New appointment request from ${data.patient_name}`;
+              }
+
+              if (notificationType === "appointment.status.updated") {
+                const data = notification.data as {
+                  patient_name?: string;
+                  doctor_name?: string;
+                  status?: string;
+                };
+                return user?.role === "patient"
+                  ? `Appointment with Dr. ${data.doctor_name} is now ${data.status}`
+                  : `Appointment with ${data.patient_name} is now ${data.status}`;
+              }
+
+              return "New notification";
+            };
+
+            return (
+              <div
+                key={notification.id}
+                className="flex items-start justify-between gap-2"
+              >
+                <p className="text-sm flex-1">{getNotificationMessage()}</p>
+                {!notification.read_at && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleMarkAsRead(notification.id)}
+                  >
+                    Mark as read
+                  </Button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </PopoverContent>
     </Popover>
