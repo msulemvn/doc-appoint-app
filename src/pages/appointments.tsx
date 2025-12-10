@@ -133,7 +133,7 @@ export default function Appointments() {
         window.Echo.leave(channelName);
       }
     };
-  }, [user]); // Depend on user to ensure correct channel and re-subscription if user changes
+  }, [user]);
 
   const filteredAppointments = allAppointments.filter((appointment) =>
     currentStatus === "all" ? true : appointment.status === currentStatus,

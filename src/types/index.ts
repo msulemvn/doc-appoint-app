@@ -73,6 +73,7 @@ export interface AuthResponse {
 
 export type AppointmentStatus =
   | "pending"
+  | "awaiting_payment"
   | "confirmed"
   | "cancelled"
   | "completed";
@@ -95,7 +96,7 @@ export interface CreateAppointmentInput {
 }
 
 export interface UpdateAppointmentStatusInput {
-  status: "confirmed" | "cancelled" | "completed";
+  status: "awaiting_payment" | "confirmed" | "cancelled" | "completed";
 }
 
 export interface AppointmentStatusUpdatedEvent {

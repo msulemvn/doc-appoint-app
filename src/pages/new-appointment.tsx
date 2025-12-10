@@ -27,7 +27,6 @@ export default function NewAppointment() {
   const [date, setDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [reason, setReason] = useState<string>("");
-  const [notes, setNotes] = useState<string>("");
   const [doctors, setDoctors] = useState<DoctorWithUser[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorWithUser>();
   const [loading, setLoading] = useState(true);
@@ -105,13 +104,13 @@ export default function NewAppointment() {
 
       const formattedDate = formatDate(appointmentDate);
 
-      await appointmentService.createAppointment({
+      const appointment = await appointmentService.createAppointment({
         doctor_id: selectedDoctor.id,
         appointment_date: formattedDate,
         notes: reason,
       });
 
-      navigate("/appointments");
+      navigate(`/appointments/${appointment.id}`);
     } catch (_error) {
       handleApiError(_error);
     } finally {
@@ -152,182 +151,177 @@ export default function NewAppointment() {
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="rounded-lg border p-6">
-                <div className="space-y-2">
-                  <Label>Select a Doctor</Label>
-                  <div className="max-h-60 overflow-y-auto pr-2">
-                    {loading ? (
-                      <div className="flex w-full items-center gap-4 rounded-lg border p-4">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-[150px]" />
-                          <Skeleton className="h-4 w-[100px]" />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {doctors.map((doctor) => (
-                          <Button
-                            key={doctor.id}
-                            type="button"
-                            variant={
-                              selectedDoctor?.id === doctor.id
-                                ? "default"
-                                : "outline"
-                            }
-                            className="flex items-center gap-4 justify-start h-auto"
-                            onClick={() => handleDoctorSelect(doctor)}
-                          >
-                            <Avatar className="h-12 w-12">
-                              {doctor.user?.avatar && (
-                                <AvatarImage
-                                  src={doctor.user?.avatar}
-                                  alt={doctor.user?.name}
-                                />
-                              )}
-                              <AvatarFallback>
-                                {getInitials(doctor.user?.name ?? "")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 text-left">
-                              <h3 className="font-semibold">
-                                {doctor.user?.name}
-                              </h3>
-                              <p className="text-sm text-muted-foreground">
-                                {doctor.specialization}
-                              </p>
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {selectedDoctor && (
-                <>
-                  <div className="rounded-lg border p-6">
-                    <h2 className="mb-4 text-xl font-semibold">
-                      Select Date & Time
-                    </h2>
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <Label>Appointment Date</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal"
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {date ? (
-                                format(date, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={date}
-                              onSelect={setDate}
-                              initialFocus
-                              disabled={[
-                                {
-                                  before: new Date(
-                                    new Date().setDate(
-                                      new Date().getDate() + 1,
-                                    ),
-                                  ),
-                                },
-                              ]}
-                              fromDate={new Date()}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
-                      {date && (
-                        <div className="space-y-2">
-                          <Label>Available Time Slots</Label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {availableSlots.map((slot) => (
-                              <Button
-                                key={slot}
-                                type="button"
-                                variant={
-                                  selectedTime === slot ? "default" : "outline"
-                                }
-                                onClick={() => setSelectedTime(slot)}
-                                className="justify-start"
-                              >
-                                <Clock className="mr-2 h-4 w-4" />
-                                {slot}
-                              </Button>
-                            ))}
+                <div className="rounded-lg border p-6">
+                  <div className="space-y-2">
+                    <Label>Select a Doctor</Label>
+                    <div className="max-h-60 overflow-y-auto pr-2">
+                      {loading ? (
+                        <div className="flex w-full items-center gap-4 rounded-lg border p-4">
+                          <Skeleton className="h-12 w-12 rounded-full" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-[150px]" />
+                            <Skeleton className="h-4 w-[100px]" />
                           </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {doctors.map((doctor) => (
+                            <Button
+                              key={doctor.id}
+                              type="button"
+                              variant={
+                                selectedDoctor?.id === doctor.id
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="flex items-center gap-4 justify-start h-auto"
+                              onClick={() => handleDoctorSelect(doctor)}
+                            >
+                              <Avatar className="h-12 w-12">
+                                {doctor.user?.avatar && (
+                                  <AvatarImage
+                                    src={doctor.user?.avatar}
+                                    alt={doctor.user?.name}
+                                  />
+                                )}
+                                <AvatarFallback>
+                                  {getInitials(doctor.user?.name ?? "")}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 text-left">
+                                <h3 className="font-semibold">
+                                  {doctor.user?.name}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {doctor.specialization}
+                                </p>
+                              </div>
+                            </Button>
+                          ))}
                         </div>
                       )}
                     </div>
                   </div>
+                </div>
 
-                  <div className="rounded-lg border p-6">
-                    <h2 className="mb-4 text-xl font-semibold">
-                      Appointment Details
-                    </h2>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="reason">Reason for Visit</Label>
-                        <Input
-                          id="reason"
-                          placeholder="Brief description of your concern"
-                          value={reason}
-                          onChange={(e) => setReason(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="notes">
-                          Additional Notes (Optional)
-                        </Label>
-                        <textarea
-                          id="notes"
-                          className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                          placeholder="Any additional information..."
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                        />
+                {selectedDoctor && (
+                  <>
+                    <div className="rounded-lg border p-6">
+                      <h2 className="mb-4 text-xl font-semibold">
+                        Select Date & Time
+                      </h2>
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <Label>Appointment Date</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-full justify-start text-left font-normal"
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {date ? (
+                                  format(date, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-auto p-0"
+                              align="start"
+                            >
+                              <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={setDate}
+                                initialFocus
+                                disabled={[
+                                  {
+                                    before: new Date(
+                                      new Date().setDate(
+                                        new Date().getDate() + 1,
+                                      ),
+                                    ),
+                                  },
+                                ]}
+                                fromDate={new Date()}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+
+                        {date && (
+                          <div className="space-y-2">
+                            <Label>Available Time Slots</Label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {availableSlots.map((slot) => (
+                                <Button
+                                  key={slot}
+                                  type="button"
+                                  variant={
+                                    selectedTime === slot
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  onClick={() => setSelectedTime(slot)}
+                                  className="justify-start"
+                                >
+                                  <Clock className="mr-2 h-4 w-4" />
+                                  {slot}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex gap-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => navigate("/appointments")}
-                      className="flex-1"
-                      disabled={isSubmitting}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={
-                        !date ||
-                        !selectedTime ||
-                        !selectedDoctor ||
-                        isSubmitting
-                      }
-                      className="flex-1"
-                    >
-                      {isSubmitting ? "Booking..." : "Book Appointment"}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </form>
+                    <div className="rounded-lg border p-6">
+                      <h2 className="mb-4 text-xl font-semibold">
+                        Appointment Details
+                      </h2>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="reason">Reason for Visit</Label>
+                          <Input
+                            id="reason"
+                            placeholder="Brief description of your concern"
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => navigate("/appointments")}
+                        className="flex-1"
+                        disabled={isSubmitting}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={
+                          !date ||
+                          !selectedTime ||
+                          !selectedDoctor ||
+                          isSubmitting
+                        }
+                        className="flex-1"
+                      >
+                        {isSubmitting
+                          ? "Booking..."
+                          : "Book Appointment"}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </form>
           </div>
 
           <div className="space-y-6">

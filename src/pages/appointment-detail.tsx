@@ -1,5 +1,12 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  PaymentElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
 import AppLayout from "@/layouts/app-layout";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -7,6 +14,7 @@ import { useInitials } from "@/hooks/use-initials";
 import { useAuthStore } from "@/stores/auth.store";
 import { appointmentService } from "@/services/appointment.service";
 import { type BreadcrumbItem, type Appointment } from "@/types";
+import { handleApiError } from "@/lib/error-handler";
 import {
   Calendar,
   Clock,
@@ -17,8 +25,8 @@ import {
   XCircle,
   User,
   MessageCircle,
+  CreditCard,
 } from "lucide-react";
-import { startConversation } from "@/services/chat.service";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +38,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { startConversation } from "@/services/chat.service";
+import { paymentService } from "@/services/payment.service";
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
 
@@ -40,6 +50,73 @@ declare global {
   }
 }
 
+const stripePromise = loadStripe(
+  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY,
+);
+
+function PaymentForm({ appointmentId }: { appointmentId: number }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPaymentElementReady, setIsPaymentElementReady] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/payment-success?appointment_id=${appointmentId}`,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border p-6">
+      <h2 className="mb-4 text-xl font-semibold">Complete Payment</h2>
+      <p className="mb-6 text-sm text-muted-foreground">
+        The doctor has confirmed your appointment. Please complete the payment to finalize your booking.
+      </p>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <PaymentElement onReady={() => setIsPaymentElementReady(true)} />
+        <Button
+          type="submit"
+          disabled={!stripe || !isPaymentElementReady || isSubmitting}
+          className="w-full"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <CreditCard className="mr-2 h-4 w-4" />
+              Pay Now
+            </>
+          )}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 export default function AppointmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -48,9 +125,27 @@ export default function AppointmentDetail() {
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [updating, setUpdating] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [isStartingChat, setIsStartingChat] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [loadingPayment, setLoadingPayment] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertVariant, setAlertVariant] = useState<"default" | "destructive">(
+    "default",
+  );
   const isDoctor = user?.role === "doctor";
+
+  useEffect(() => {
+    if (showAlert) {
+      const timer = setTimeout(() => {
+        setShowAlert(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [showAlert]);
 
   useEffect(() => {
     const fetchAppointment = async () => {
@@ -93,24 +188,76 @@ export default function AppointmentDetail() {
       }
     };
   }, [id, user]);
-  const handleStatusUpdate = async (
+
+  useEffect(() => {
+    const loadPaymentIntent = async () => {
+      if (!appointment || appointment.status !== "awaiting_payment" || isDoctor || clientSecret) {
+        return;
+      }
+
+      setLoadingPayment(true);
+      try {
+        const { clientSecret: secret } = await paymentService.createPaymentIntent({
+          appointment_id: appointment.id,
+        });
+        setClientSecret(secret);
+      } catch (err) {
+        handleApiError(err);
+      } finally {
+        setLoadingPayment(false);
+      }
+    };
+
+    loadPaymentIntent();
+  }, [appointment, isDoctor, clientSecret]);
+
+  const handleDoctorStatusUpdate = async (
     status: "confirmed" | "cancelled" | "completed",
   ) => {
     if (!id || !appointment) return;
+
+    const setLoadingState = status === "completed" ? setCompleting : setCancelling;
+
     try {
-      setUpdating(true);
+      setLoadingState(true);
       const updatedAppointment =
         await appointmentService.updateAppointmentStatus(Number(id), {
           status,
         });
       setAppointment(updatedAppointment);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update status");
+      setShowAlert(true);
+      setAlertMessage(
+        err instanceof Error ? err.message : "Failed to update status",
+      );
+      setAlertVariant("destructive");
     } finally {
-      setUpdating(false);
+      setLoadingState(false);
     }
   };
-  const handleCancel = () => handleStatusUpdate("cancelled");
+
+  const handleDoctorConfirmAppointment = async () => {
+    if (!id || !appointment) return;
+    try {
+      setConfirming(true);
+      const updatedAppointment =
+        await appointmentService.doctorConfirmAppointment(Number(id));
+      setAppointment(updatedAppointment);
+    } catch (err) {
+      setShowAlert(true);
+      setAlertMessage(
+        err instanceof Error
+          ? err.message
+          : "Failed to confirm appointment by doctor",
+      );
+      setAlertVariant("destructive");
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const handleCancel = () => handleDoctorStatusUpdate("cancelled");
+
   const handleStartChat = async () => {
     if (!appointment) return;
     const otherUserId = isDoctor
@@ -124,7 +271,11 @@ export default function AppointmentDetail() {
         navigate(`/chats/${chat.uuid}`);
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to start chat");
+      setShowAlert(true);
+      setAlertMessage(
+        err instanceof Error ? err.message : "Failed to start chat",
+      );
+      setAlertVariant("destructive");
     } finally {
       setIsStartingChat(false);
     }
@@ -184,6 +335,7 @@ export default function AppointmentDetail() {
 
   const statusColors = {
     pending: "border-yellow-200 bg-yellow-50 text-yellow-700",
+    awaiting_payment: "border-purple-200 bg-purple-50 text-purple-700",
     confirmed: "border-green-200 bg-green-50 text-green-700",
     cancelled: "border-red-200 bg-red-50 text-red-700",
     completed: "border-blue-200 bg-blue-50 text-blue-700",
@@ -194,10 +346,25 @@ export default function AppointmentDetail() {
   const canCancel =
     appointment.status !== "cancelled" && appointment.status !== "completed";
   const canChat =
-    appointment.status === "pending" || appointment.status === "confirmed";
+    appointment.status === "confirmed" || appointment.status === "completed";
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
+      <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+        <AlertDialogContent className="max-w-md mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {alertVariant === "destructive" ? "Error" : "Success"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowAlert(false)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -207,39 +374,27 @@ export default function AppointmentDetail() {
           <div className="flex flex-wrap gap-2">
             {canConfirm && (
               <Button
-                onClick={() => handleStatusUpdate("confirmed")}
-                disabled={updating}
+                onClick={handleDoctorConfirmAppointment}
+                disabled={confirming}
               >
-                {updating ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                )}
+                <CheckCircle className="mr-2 h-4 w-4" />
                 Confirm
               </Button>
             )}
             {canComplete && (
               <Button
-                onClick={() => handleStatusUpdate("completed")}
-                disabled={updating}
+                onClick={() => handleDoctorStatusUpdate("completed")}
+                disabled={completing}
               >
-                {updating ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                )}
+                <CheckCircle className="mr-2 h-4 w-4" />
                 Complete
               </Button>
             )}
             {canCancel && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={updating}>
-                    {updating ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <XCircle className="mr-2 h-4 w-4" />
-                    )}
+                  <Button variant="destructive" disabled={cancelling}>
+                    <XCircle className="mr-2 h-4 w-4" />
                     Cancel
                   </Button>
                 </AlertDialogTrigger>
@@ -268,6 +423,18 @@ export default function AppointmentDetail() {
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <div className="space-y-6">
+              {!isDoctor && appointment.status === "awaiting_payment" && (
+                loadingPayment ? (
+                  <div className="rounded-lg border p-6 text-center">
+                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
+                    <p className="mt-4 text-sm text-muted-foreground">Loading payment...</p>
+                  </div>
+                ) : clientSecret ? (
+                  <Elements stripe={stripePromise} options={{ clientSecret }}>
+                    <PaymentForm appointmentId={appointment.id} />
+                  </Elements>
+                ) : null
+              )}
               <div className="rounded-lg border p-6">
                 <h2 className="mb-4 text-xl font-semibold">
                   Appointment Information
@@ -360,7 +527,7 @@ export default function AppointmentDetail() {
             </div>
 
             <div className="rounded-lg border p-6">
-              .<h3 className="mb-4 font-semibold">Quick Actions</h3>
+              <h3 className="mb-4 font-semibold">Quick Actions</h3>
               <div className="space-y-2">
                 {canChat && (
                   <Button

@@ -51,4 +51,12 @@ export const appointmentService = {
     );
     return response.data;
   },
+
+  doctorConfirmAppointment: async (id: number): Promise<Appointment> => {
+    const response = await api.put<ApiResponse<Appointment>>(
+      `/appointments/${id}/status`,
+      { status: "awaiting_payment" },
+    );
+    return response.data;
+  },
 };
