@@ -3,7 +3,6 @@ import { getChats } from "@/services/chat.service";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -107,14 +106,19 @@ export default function ChatsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Chats</CardTitle>
-          <CardDescription>Here are all your active chats.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading && <div>Loading...</div>}
           {error && <div className="text-destructive">{error}</div>}
           <div className="space-y-4">
             {!isLoading && !error && chats.length === 0 && (
-              <div>No chats found.</div>
+              <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed p-12">
+                <MessageCircle className="h-12 w-12 text-muted-foreground" aria-hidden="true" />
+                <div className="text-center">
+                  <h3 className="font-semibold">No chats found</h3>
+                  <p className="text-sm text-muted-foreground">No active chats found.</p>
+                </div>
+              </div>
             )}
             {!isLoading &&
               !error &&
