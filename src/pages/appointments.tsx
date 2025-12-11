@@ -225,14 +225,6 @@ export default function Appointments() {
                         : "You haven't scheduled any appointments yet"}
                     </p>
                   </div>
-                  {!isDoctor && (
-                    <Button asChild>
-                      <Link to="/appointments/new">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Schedule an Appointment
-                      </Link>
-                    </Button>
-                  )}
                 </div>
               )}
 

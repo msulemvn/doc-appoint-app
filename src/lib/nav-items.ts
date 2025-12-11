@@ -19,9 +19,4 @@ export const mainNav = [
     href: "/chats",
     icon: "message-circle",
   },
-  {
-    title: "Settings",
-    href: "/settings",
-    icon: "settings",
-  },
 ];

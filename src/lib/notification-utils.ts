@@ -1,40 +1,35 @@
-import { Calendar, MessageCircle, type LucideIcon } from "lucide-react";
+import { Calendar, MessageCircle, CreditCard, Bell, type LucideIcon } from "lucide-react";
 import type { Notification } from "@/stores/notification.store";
 
 export function getNotificationRoute(
   notification: Notification,
 ): string | null {
-  const data = notification.data;
+  const { type, data } = notification;
 
-  if (notification.type.includes("Appointment")) {
-    if (data.appointment_id) {
-      return `/appointments/${data.appointment_id}`;
-    }
-    return "/appointments";
+  if (type.includes("Appointment") || type.includes("Payment")) {
+    return data.appointment_id
+      ? `/appointments/${data.appointment_id}`
+      : "/appointments";
   }
 
-  if (notification.type.includes("Message")) {
-    if (data.chat_uuid) {
-      return `/chats/${data.chat_uuid}`;
-    }
-    return "/chats";
+  if (type.includes("Message")) {
+    return data.chat_uuid ? `/chats/${data.chat_uuid}` : "/chats";
   }
 
   return null;
 }
 
-export function getNotificationIcon(
-  notification: Notification,
-): LucideIcon | null {
-  if (notification.type.includes("Appointment")) {
-    return Calendar;
+export function getNotificationIcon(notification: Notification): LucideIcon {
+  switch (true) {
+    case notification.type.includes("Payment"):
+      return CreditCard;
+    case notification.type.includes("Appointment"):
+      return Calendar;
+    case notification.type.includes("Message"):
+      return MessageCircle;
+    default:
+      return Bell;
   }
-
-  if (notification.type.includes("Message")) {
-    return MessageCircle;
-  }
-
-  return null;
 }
 
 export function formatNotificationMessage(

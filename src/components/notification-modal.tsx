@@ -174,13 +174,11 @@ export function NotificationModal() {
                   }`}
                 >
                   <div className="flex items-start gap-3 flex-1 min-w-0">
-                    {NotificationIcon && (
-                      <div
-                        className={`mt-0.5 ${isUnread ? "text-primary" : "text-muted-foreground"}`}
-                      >
-                        <NotificationIcon className="h-4 w-4" />
-                      </div>
-                    )}
+                    <div
+                      className={`mt-0.5 ${isUnread ? "text-primary" : "text-muted-foreground"}`}
+                    >
+                      <NotificationIcon className="h-4 w-4" />
+                    </div>
 
                     <div className="flex-1 min-w-0 space-y-1">
                       <p

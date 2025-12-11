@@ -47,10 +47,14 @@ const handleNotification = (broadcastData: BroadcastNotificationData) => {
     const isAppointmentStatusUpdated =
       broadcastData.type ===
       "App\\Notifications\\AppointmentStatusUpdatedNotification";
+    const isPaymentConfirmed =
+      broadcastData.type === "App\\Notifications\\PaymentConfirmedNotification";
     const isCancelled = broadcastData.status === "cancelled";
     const isConfirmed = broadcastData.status === "confirmed";
 
     if (isAppointmentCreated) {
+      toast.success(broadcastData.message as string);
+    } else if (isPaymentConfirmed) {
       toast.success(broadcastData.message as string);
     } else if (isAppointmentStatusUpdated && isConfirmed) {
       toast.success(broadcastData.message as string);
@@ -92,12 +96,16 @@ export const useEchoSetup = () => {
     const channelName = `App.Models.User.${userId}`;
     const channel = getOrCreatePrivateChannel(channelName);
 
-    channel.listen(
-      ".Illuminate\\Notifications\\Events\\BroadcastNotificationCreated",
-      handleNotification,
-    );
+    const eventName =
+      ".Illuminate\\Notifications\\Events\\BroadcastNotificationCreated";
+
+    channel.listen(eventName, handleNotification);
 
     isEchoSetupComplete = true;
     currentSetupUserId = userId;
+
+    return () => {
+      channel.stopListening(eventName, handleNotification);
+    };
   }, [isAuthenticated, userId]);
 };
