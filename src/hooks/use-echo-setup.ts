@@ -88,7 +88,7 @@ export const useEchoSetup = () => {
     notificationChannel = echo.private(channelName);
     notificationChannel.listen(
       ".Illuminate\\Notifications\\Events\\BroadcastNotificationCreated",
-      handleNotification
+      handleNotification,
     );
 
     setupCompleteRef.current = true;

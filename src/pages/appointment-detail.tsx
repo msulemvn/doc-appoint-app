@@ -50,9 +50,7 @@ declare global {
   }
 }
 
-const stripePromise = loadStripe(
-  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY,
-);
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 function PaymentForm({ appointmentId }: { appointmentId: number }) {
   const stripe = useStripe();
@@ -91,7 +89,8 @@ function PaymentForm({ appointmentId }: { appointmentId: number }) {
     <div className="rounded-lg border p-6">
       <h2 className="mb-4 text-xl font-semibold">Complete Payment</h2>
       <p className="mb-6 text-sm text-muted-foreground">
-        The doctor has confirmed your appointment. Please complete the payment to finalize your booking.
+        The doctor has confirmed your appointment. Please complete the payment
+        to finalize your booking.
       </p>
       <form onSubmit={handleSubmit} className="space-y-6">
         <PaymentElement onReady={() => setIsPaymentElementReady(true)} />
@@ -191,15 +190,21 @@ export default function AppointmentDetail() {
 
   useEffect(() => {
     const loadPaymentIntent = async () => {
-      if (!appointment || appointment.status !== "awaiting_payment" || isDoctor || clientSecret) {
+      if (
+        !appointment ||
+        appointment.status !== "awaiting_payment" ||
+        isDoctor ||
+        clientSecret
+      ) {
         return;
       }
 
       setLoadingPayment(true);
       try {
-        const { clientSecret: secret } = await paymentService.createPaymentIntent({
-          appointment_id: appointment.id,
-        });
+        const { clientSecret: secret } =
+          await paymentService.createPaymentIntent({
+            appointment_id: appointment.id,
+          });
         setClientSecret(secret);
       } catch (err) {
         handleApiError(err);
@@ -216,7 +221,8 @@ export default function AppointmentDetail() {
   ) => {
     if (!id || !appointment) return;
 
-    const setLoadingState = status === "completed" ? setCompleting : setCancelling;
+    const setLoadingState =
+      status === "completed" ? setCompleting : setCancelling;
 
     try {
       setLoadingState(true);
@@ -333,12 +339,20 @@ export default function AppointmentDetail() {
     minute: "2-digit",
   });
 
-  const statusColors = {
+  const statusColors: Record<string, string> = {
     pending: "border-yellow-200 bg-yellow-50 text-yellow-700",
-    awaiting_payment: "border-purple-200 bg-purple-50 text-purple-700",
     confirmed: "border-green-200 bg-green-50 text-green-700",
     cancelled: "border-red-200 bg-red-50 text-red-700",
     completed: "border-blue-200 bg-blue-50 text-blue-700",
+    awaiting_payment: "border-purple-200 bg-purple-50 text-purple-700",
+  };
+
+  const statusLabels: Record<string, string> = {
+    pending: "Pending",
+    confirmed: "Confirmed",
+    cancelled: "Cancelled",
+    completed: "Completed",
+    awaiting_payment: "Awaiting Payment",
   };
 
   const canConfirm = isDoctor && appointment.status === "pending";
@@ -423,18 +437,20 @@ export default function AppointmentDetail() {
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <div className="space-y-6">
-              {!isDoctor && appointment.status === "awaiting_payment" && (
-                loadingPayment ? (
+              {!isDoctor &&
+                appointment.status === "awaiting_payment" &&
+                (loadingPayment ? (
                   <div className="rounded-lg border p-6 text-center">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
-                    <p className="mt-4 text-sm text-muted-foreground">Loading payment...</p>
+                    <p className="mt-4 text-sm text-muted-foreground">
+                      Loading payment...
+                    </p>
                   </div>
                 ) : clientSecret ? (
                   <Elements stripe={stripePromise} options={{ clientSecret }}>
                     <PaymentForm appointmentId={appointment.id} />
                   </Elements>
-                ) : null
-              )}
+                ) : null)}
               <div className="rounded-lg border p-6">
                 <h2 className="mb-4 text-xl font-semibold">
                   Appointment Information
@@ -463,9 +479,9 @@ export default function AppointmentDetail() {
                       )}
                       <div className="mt-1 flex items-center gap-2 text-sm">
                         <span
-                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${statusColors[appointment.status as keyof typeof statusColors]}`}
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusColors[appointment.status as keyof typeof statusColors]}`}
                         >
-                          {appointment.status}
+                          {statusLabels[appointment.status]}
                         </span>
                       </div>
                     </div>

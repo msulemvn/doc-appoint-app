@@ -135,14 +135,25 @@ export default function Appointments() {
     };
   }, [user]);
 
-  const filteredAppointments = allAppointments.filter((appointment) =>
-    currentStatus === "all" ? true : appointment.status === currentStatus,
-  );
+  const filteredAppointments = allAppointments.filter((appointment) => {
+    if (currentStatus === "all") return true;
+    if (currentStatus === "pending") {
+      return (
+        appointment.status === "pending" ||
+        appointment.status === "awaiting_payment"
+      );
+    }
+    return appointment.status === currentStatus;
+  });
 
   const counts = appointmentStatuses.reduce(
     (acc, status) => {
       if (status.value === "all") {
         acc[status.value] = allAppointments.length;
+      } else if (status.value === "pending") {
+        acc[status.value] = allAppointments.filter(
+          (a) => a.status === "pending" || a.status === "awaiting_payment",
+        ).length;
       } else {
         acc[status.value] = allAppointments.filter(
           (a) => a.status === status.value,
@@ -272,11 +283,20 @@ function AppointmentCard({
     minute: "2-digit",
   });
 
-  const statusColors = {
+  const statusColors: Record<string, string> = {
     pending: "border-yellow-200 bg-yellow-50 text-yellow-700",
     confirmed: "border-green-200 bg-green-50 text-green-700",
     cancelled: "border-red-200 bg-red-50 text-red-700",
     completed: "border-blue-200 bg-blue-50 text-blue-700",
+    awaiting_payment: "border-purple-200 bg-purple-50 text-purple-700",
+  };
+
+  const statusLabels: Record<string, string> = {
+    pending: "Pending",
+    confirmed: "Confirmed",
+    cancelled: "Cancelled",
+    completed: "Completed",
+    awaiting_payment: "Awaiting Payment",
   };
 
   return (
@@ -307,9 +327,9 @@ function AppointmentCard({
           </div>
           <div>
             <span
-              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${statusColors[appointment.status as keyof typeof statusColors]}`}
+              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusColors[appointment.status] || "border-gray-200 bg-gray-50 text-gray-700"}`}
             >
-              {appointment.status}
+              {statusLabels[appointment.status]}
             </span>
           </div>
         </div>
