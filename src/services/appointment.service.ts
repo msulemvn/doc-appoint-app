@@ -4,6 +4,7 @@ import type {
   AppointmentStatus,
   CreateAppointmentInput,
   UpdateAppointmentStatusInput,
+  ITimeSlot,
 } from "@/types";
 
 interface ApiResponse<T> {
@@ -58,5 +59,15 @@ export const appointmentService = {
       { status: "awaiting_payment" },
     );
     return response.data;
+  },
+
+  getAvailableTimeSlots: async (
+    doctorId: string,
+    date: string,
+  ): Promise<ITimeSlot[]> => {
+    const response = await api.get<ITimeSlot[]>(
+      `/doctors/${doctorId}/available-slots?date=${date}`,
+    );
+    return response;
   },
 };

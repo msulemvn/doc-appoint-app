@@ -11,7 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { type BreadcrumbItem } from "@/types";
+import { type BreadcrumbItem, type ITimeSlot } from "@/types";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { type DoctorWithUser, doctorService } from "@/services/doctor.service";
@@ -31,6 +31,7 @@ export default function NewAppointment() {
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorWithUser>();
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<ITimeSlot[]>([]);
 
   const getInitials = useInitials();
 
@@ -60,14 +61,27 @@ export default function NewAppointment() {
     },
   ];
 
-  const availableSlots = [
-    "09:00 AM",
-    "10:00 AM",
-    "11:00 AM",
-    "02:00 PM",
-    "03:00 PM",
-    "04:00 PM",
-  ];
+  useEffect(() => {
+    if (!selectedDoctor || !date) {
+      setAvailableTimeSlots([]);
+      return;
+    }
+
+    const fetchAvailableTimeSlots = async () => {
+      try {
+        const slots = await appointmentService.getAvailableTimeSlots(
+          selectedDoctor.id.toString(),
+          format(date, "yyyy-MM-dd"),
+        );
+        setAvailableTimeSlots(slots);
+      } catch (_error) {
+        handleApiError(_error);
+        setAvailableTimeSlots([]);
+      }
+    };
+
+    fetchAvailableTimeSlots();
+  }, [selectedDoctor, date]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -251,22 +265,30 @@ export default function NewAppointment() {
                       {date && (
                         <div className="space-y-2">
                           <Label>Available Time Slots</Label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {availableSlots.map((slot) => (
-                              <Button
-                                key={slot}
-                                type="button"
-                                variant={
-                                  selectedTime === slot ? "default" : "outline"
-                                }
-                                onClick={() => setSelectedTime(slot)}
-                                className="justify-start"
-                              >
-                                <Clock className="mr-2 h-4 w-4" />
-                                {slot}
-                              </Button>
-                            ))}
-                          </div>
+                          {availableTimeSlots.length > 0 ? (
+                            <div className="grid grid-cols-3 gap-2">
+                              {availableTimeSlots.map((slot) => (
+                                <Button
+                                  key={slot.time}
+                                  type="button"
+                                  variant={
+                                    selectedTime === slot.time
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  onClick={() => setSelectedTime(slot.time)}
+                                  className="justify-start"
+                                >
+                                  <Clock className="mr-2 h-4 w-4" />
+                                  {slot.time}
+                                </Button>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              No available time slots for the selected date.
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>

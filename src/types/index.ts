@@ -148,3 +148,8 @@ export interface SendMessagePayload {
   message: string;
   file?: File;
 }
+
+export interface ITimeSlot {
+  time: string;
+  is_available: boolean;
+}
