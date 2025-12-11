@@ -1,12 +1,26 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+export type NotificationData = {
+  message?: string;
+  appointment_id?: number | string;
+  chat_uuid?: string;
+  patient_name?: string;
+  doctor_name?: string;
+  status?: string;
+  sender_name?: string;
+  content?: string;
+  file?: string;
+  appointment_date?: string;
+  [key: string]: unknown;
+};
+
 export type Notification = {
   id: string;
   notifiable_id: number;
   notifiable_type: string;
   type: string;
-  data: { message: string; [key: string]: unknown };
+  data: NotificationData;
   read_at: string | null;
   created_at: string;
   updated_at: string;

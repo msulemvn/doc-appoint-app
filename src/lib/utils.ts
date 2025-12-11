@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { formatDistanceToNow } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -19,4 +20,13 @@ export function isSameUrl(url1: string, url2: string) {
 
 export function resolveUrl(url: string | { url: string }): string {
   return typeof url === "string" ? url : url.url;
+}
+
+export function formatRelativeTime(date: string | Date | null): string {
+  if (!date) return "";
+  try {
+    return formatDistanceToNow(new Date(date), { addSuffix: true });
+  } catch {
+    return "";
+  }
 }
