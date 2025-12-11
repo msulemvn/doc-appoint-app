@@ -82,30 +82,25 @@ export const useEchoSetup = () => {
       return;
     }
 
-    if (isEchoSetupComplete && currentSetupUserId === userId) {
-      return;
-    }
-
     if (isEchoSetupComplete && currentSetupUserId !== userId) {
       disconnectEcho();
       isEchoSetupComplete = false;
       currentSetupUserId = null;
     }
-    initEcho(token);
+
+    if (!isEchoSetupComplete) {
+      initEcho(token);
+      isEchoSetupComplete = true;
+      currentSetupUserId = userId;
+    }
 
     const channelName = `App.Models.User.${userId}`;
     const channel = getOrCreatePrivateChannel(channelName);
 
-    const eventName =
-      ".Illuminate\\Notifications\\Events\\BroadcastNotificationCreated";
-
-    channel.listen(eventName, handleNotification);
-
-    isEchoSetupComplete = true;
-    currentSetupUserId = userId;
+    channel.notification(handleNotification);
 
     return () => {
-      channel.stopListening(eventName, handleNotification);
+      channel.stopListening('.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated');
     };
   }, [isAuthenticated, userId]);
 };
