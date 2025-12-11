@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { startConversation } from "@/services/chat.service";
 import { paymentService } from "@/services/payment.service";
+import { getOrCreatePrivateChannel } from "@/lib/echo";
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
 
@@ -167,7 +168,7 @@ export default function AppointmentDetail() {
     if (!user?.id || !window.Echo) return;
 
     const channelName = `App.Models.User.${user.id}`;
-    const channel = window.Echo.private(channelName);
+    const channel = getOrCreatePrivateChannel(channelName);
 
     const handleRealtimeUpdate = (e: { appointment: Appointment }) => {
       if (e.appointment.id === Number(id)) {
@@ -178,12 +179,11 @@ export default function AppointmentDetail() {
     channel.listen(".appointment.status.updated", handleRealtimeUpdate);
 
     return () => {
-      if (window.Echo) {
+      if (channel) {
         channel.stopListening(
           ".appointment.status.updated",
           handleRealtimeUpdate,
         );
-        window.Echo.leave(channelName);
       }
     };
   }, [id, user]);

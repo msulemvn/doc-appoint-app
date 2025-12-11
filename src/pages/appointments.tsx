@@ -14,6 +14,7 @@ import {
 import { Calendar, Clock, Plus, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { getOrCreatePrivateChannel } from "@/lib/echo";
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
 
@@ -91,7 +92,7 @@ export default function Appointments() {
     if (!user || !window.Echo) return;
 
     const channelName = `App.Models.User.${user.id}`;
-    const channel = window.Echo.private(channelName);
+    const channel = getOrCreatePrivateChannel(channelName);
 
     const handleStatusUpdate = (e: { appointment?: Appointment }) => {
       if (!e.appointment) {
@@ -126,11 +127,10 @@ export default function Appointments() {
       .listen(".appointment.created", handleAppointmentCreated);
 
     return () => {
-      if (window.Echo) {
+      if (channel) {
         channel
           .stopListening(".appointment.status.updated", handleStatusUpdate)
           .stopListening(".appointment.created", handleAppointmentCreated);
-        window.Echo.leave(channelName);
       }
     };
   }, [user]);

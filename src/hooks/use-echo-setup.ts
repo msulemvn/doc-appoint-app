@@ -1,10 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAuthStore } from "@/stores/auth.store";
-import { initEcho, disconnectEcho, getEchoInstance } from "@/lib/echo";
+import {
+  initEcho,
+  disconnectEcho,
+  getOrCreatePrivateChannel,
+} from "@/lib/echo";
 import { useNotificationStore } from "@/stores/notification.store";
 import { toast } from "sonner";
 import type { Notification } from "@/stores/notification.store";
-import { Channel } from "laravel-echo";
 
 type BroadcastNotificationData = {
   id: string;
@@ -15,7 +18,8 @@ type BroadcastNotificationData = {
 };
 
 const shownToastIds = new Set<string>();
-let notificationChannel: Channel | null = null;
+let isEchoSetupComplete = false;
+let currentSetupUserId: number | null = null;
 
 const handleNotification = (broadcastData: BroadcastNotificationData) => {
   const userId = useAuthStore.getState().user?.id;
@@ -59,38 +63,41 @@ const handleNotification = (broadcastData: BroadcastNotificationData) => {
 };
 
 export const useEchoSetup = () => {
-  const token = useAuthStore((state) => state.token);
   const userId = useAuthStore((state) => state.user?.id);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const setupCompleteRef = useRef(false);
 
   useEffect(() => {
+    const token = useAuthStore.getState().token;
+
     if (!isAuthenticated || !token || !userId) {
-      if (notificationChannel) {
-        notificationChannel = null;
+      if (isEchoSetupComplete) {
+        disconnectEcho();
+        isEchoSetupComplete = false;
+        currentSetupUserId = null;
       }
+      return;
+    }
+
+    if (isEchoSetupComplete && currentSetupUserId === userId) {
+      return;
+    }
+
+    if (isEchoSetupComplete && currentSetupUserId !== userId) {
       disconnectEcho();
-      setupCompleteRef.current = false;
-      return;
+      isEchoSetupComplete = false;
+      currentSetupUserId = null;
     }
-
-    if (setupCompleteRef.current) {
-      return;
-    }
-
     initEcho(token);
-    const echo = getEchoInstance();
-    if (!echo) {
-      return;
-    }
 
     const channelName = `App.Models.User.${userId}`;
-    notificationChannel = echo.private(channelName);
-    notificationChannel.listen(
+    const channel = getOrCreatePrivateChannel(channelName);
+
+    channel.listen(
       ".Illuminate\\Notifications\\Events\\BroadcastNotificationCreated",
       handleNotification,
     );
 
-    setupCompleteRef.current = true;
-  }, [isAuthenticated, token, userId]);
+    isEchoSetupComplete = true;
+    currentSetupUserId = userId;
+  }, [isAuthenticated, userId]);
 };

@@ -74,3 +74,19 @@ export const disconnectEcho = () => {
     currentToken = null;
   }
 };
+
+export const getOrCreatePrivateChannel = (channelName: string) => {
+  const echo = getEchoInstance();
+  if (!echo) {
+    throw new Error("Echo instance not initialized");
+  }
+
+  const privateChannelName = `private-${channelName}`;
+  let channel = echo.connector.channels[privateChannelName];
+
+  if (!channel) {
+    channel = echo.private(channelName);
+  }
+
+  return channel;
+};
