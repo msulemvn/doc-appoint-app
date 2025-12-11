@@ -9,7 +9,7 @@ declare global {
 }
 
 window.Pusher = Pusher;
-Pusher.logToConsole = import.meta.env.DEV;
+Pusher.logToConsole = import.meta.env.VITE_PUSHER_DEBUG === 'true';
 
 let echoInstance: Echo<"reverb"> | null = null;
 let currentToken: string | null = null;
